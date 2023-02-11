@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2023 Dawid Pilarski
+ * BSD 2-Clause license.
+ */
+
 #include <netformats/basic_value.hpp>
 #include <netformats/basic_object.hpp>
 #include <netformats/basic_array.hpp>

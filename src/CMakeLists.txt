@@ -1,3 +1,8 @@
+#
+#  Copyright (c) 2023 Dawid Pilarski
+#  BSD 2-Clause license.
+#
+
 project(NFlib LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)

@@ -1,3 +1,9 @@
+#
+#  Copyright (c) 2023 Dawid Pilarski
+#  BSD 2-Clause license.
+#
+
+
 cmake_minimum_required(VERSION 3.24)
 project(NetFormats)
 option(NF_BUILD_TESTS "Build tests" ON)

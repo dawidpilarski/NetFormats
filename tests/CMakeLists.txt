@@ -1,3 +1,8 @@
+#
+#  Copyright (c) 2023 Dawid Pilarski
+#  BSD 2-Clause license.
+#
+
 project(tests)
 
 enable_testing()
