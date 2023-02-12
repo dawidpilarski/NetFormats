@@ -15,12 +15,20 @@ jobs:
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v3
-    - name : Install Conan
-      run: pip3 install conan && conan profile new --detect default
+    
+    - name: Install newest gcc
+      run: |
+        apt-get install -y gcc-12
+    
+    - name: Install Conan
+      run: |
+        pip3 install conan 
+        conan profile new --detect default
+        conan profile update settings.compiler.version=12 default
 
     - name: Create build directory
       run: mkdir ${{github.workspace}}/build
@@ -31,11 +39,11 @@ jobs:
     
     - name: Configure CMake
       working-directory: ${{github.workspace}}/build
-      run: cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNF_BUILD_TESTS=ON ../
+      run: CC="gcc" CXX="g++12" cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNF_BUILD_TESTS=ON ../
 
     - name: Build
       working-directory: ${{github.workspace}}/build
-      run: cmake --build .
+      run: CC="gcc" CXX="g++12" cmake --build .
 
     - name: Test
       working-directory: ${{github.workspace}}/build
