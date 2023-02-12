@@ -126,7 +126,7 @@ public:
     using idx_to_type = details::idx_to_type<basic_value, idx>;
 
     template <json_type idx>
-    using idx_to_type_t = idx_to_type<idx>::type;
+    using idx_to_type_t = typename idx_to_type<idx>::type;
 
     template <typename T>
             requires (can_store_v<T>)
@@ -310,37 +310,37 @@ private:
 namespace details{
 template<typename basic_value>
 struct idx_to_type<basic_value, json_type::null>{
-    using type = basic_value::null;
+    using type = typename basic_value::null;
 };
 
 template<typename basic_value>
 struct idx_to_type<basic_value, json_type::boolean>{
-    using type = basic_value::boolean;
+    using type = typename basic_value::boolean;
 };
 
 template<typename basic_value>
 struct idx_to_type<basic_value, json_type::floating_point>{
-    using type = basic_value::floating_point;
+    using type = typename basic_value::floating_point;
 };
 
 template<typename basic_value>
 struct idx_to_type<basic_value, json_type::integer>{
-    using type = basic_value::integer;
+    using type = typename basic_value::integer;
 };
 
 template<typename basic_value>
 struct idx_to_type<basic_value, json_type::string>{
-    using type = basic_value::string;
+    using type = typename basic_value::string;
 };
 
 template<typename basic_value>
 struct idx_to_type<basic_value, json_type::array>{
-    using type = basic_value::array;
+    using type = typename basic_value::array;
 };
 
 template<typename basic_value>
 struct idx_to_type<basic_value, json_type::object>{
-    using type = basic_value::object;
+    using type = typename basic_value::object;
 };
 }
 

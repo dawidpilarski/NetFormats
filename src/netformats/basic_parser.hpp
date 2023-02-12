@@ -50,13 +50,13 @@ template <typename string_,
 class basic_parser{
 public:
     using value = basic_value<string_, integer_>;
-    using object = value::object;
-    using array = value::array;
-    using string = value::string;
-    using integer = value::integer;
-    using boolean = value::boolean;
-    using floating_point = value::floating_point;
-    using null = value::null;
+    using object = typename value::object;
+    using array = typename value::array;
+    using string = typename value::string;
+    using integer = typename value::integer;
+    using boolean = typename value::boolean;
+    using floating_point = typename value::floating_point;
+    using null = typename value::null;
 
     //todo handle allocators correctly
     explicit basic_parser(std::allocator<int> alloc) : root_allocator(std::move(alloc)){}

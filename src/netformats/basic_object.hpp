@@ -46,21 +46,21 @@ class basic_object {
 public:
     using key_type = key;
     using mapped_type = value;
-    using value_type = storage::value_type;
-    using size_type	 = storage::size_type;
-    using difference_type = storage::difference_type;
-    using allocator_type = storage::allocator_type;
-    using reference	= storage::reference;
-    using const_reference = storage::const_reference;
-    using pointer = storage::pointer;
-    using const_pointer = storage::const_pointer;
-    using iterator = storage::iterator;
-    using const_iterator = storage::const_iterator;
+    using value_type = typename storage::value_type;
+    using size_type	 = typename storage::size_type;
+    using difference_type = typename storage::difference_type;
+    using allocator_type = typename storage::allocator_type;
+    using reference	= typename storage::reference;
+    using const_reference = typename storage::const_reference;
+    using pointer = typename storage::pointer;
+    using const_pointer = typename storage::const_pointer;
+    using iterator = typename storage::iterator;
+    using const_iterator = typename storage::const_iterator;
 
     basic_object() = default;
     basic_object(const basic_object &) = default;
     basic_object(basic_object &&) noexcept(std::is_nothrow_move_constructible_v < storage > ) = default;
-    explicit basic_object(storage::allocator_type allocator) noexcept(std::is_nothrow_move_constructible_v <
+    explicit basic_object(typename storage::allocator_type allocator) noexcept(std::is_nothrow_move_constructible_v <
                                                                       typename storage::allocator_type > ): storage(
             std::move(allocator)) {}
 

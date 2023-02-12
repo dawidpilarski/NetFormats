@@ -24,17 +24,17 @@ namespace netformats::json::storages{
 
     using key_type = key;
     using mapped_type = value;
-    using value_type = container::value_type;
-    using size_type	 = container::size_type;
-    using difference_type = container::difference_type;
-    using key_compare = container::key_compare;
-    using allocator_type = container::allocator_type;
-    using reference	= container::reference;
-    using const_reference = container::const_reference;
-    using pointer = container::pointer;
-    using const_pointer = container::const_pointer;
-    using iterator = container::iterator;
-    using const_iterator = container::const_iterator;
+    using value_type = typename container::value_type;
+    using size_type	 = typename container::size_type;
+    using difference_type = typename container::difference_type;
+    using key_compare = typename container::key_compare;
+    using allocator_type = typename container::allocator_type;
+    using reference	= typename container::reference;
+    using const_reference = typename container::const_reference;
+    using pointer = typename container::pointer;
+    using const_pointer = typename container::const_pointer;
+    using iterator = typename container::iterator;
+    using const_iterator = typename container::const_iterator;
 
     static constexpr bool stores_duplicates = true;
     static constexpr bool is_transparent = true;
@@ -51,17 +51,17 @@ public:
 
     using key_type = key;
     using mapped_type = value;
-    using value_type = container::value_type;
-    using size_type	 = container::size_type;
-    using difference_type = container::difference_type;
-    using key_compare = container::key_compare;
-    using allocator_type = container::allocator_type;
-    using reference	= container::reference;
-    using const_reference = container::const_reference;
-    using pointer = container::pointer;
-    using const_pointer = container::const_pointer;
-    using iterator = container::iterator;
-    using const_iterator = container::const_iterator;
+    using value_type = typename container::value_type;
+    using size_type	 = typename container::size_type;
+    using difference_type = typename container::difference_type;
+    using key_compare = typename container::key_compare;
+    using allocator_type = typename container::allocator_type;
+    using reference	= typename container::reference;
+    using const_reference = typename container::const_reference;
+    using pointer = typename container::pointer;
+    using const_pointer = typename container::const_pointer;
+    using iterator = typename container::iterator;
+    using const_iterator = typename container::const_iterator;
 
     static constexpr bool stores_duplicates = true;
     static constexpr bool is_transparent = true;
@@ -77,17 +77,17 @@ public:
 
     using key_type = key;
     using mapped_type = value;
-    using value_type = container::value_type;
-    using size_type	 = container::size_type;
-    using difference_type = container::difference_type;
-    using key_compare = container::key_compare;
-    using allocator_type = container::allocator_type;
-    using reference	= container::reference;
-    using const_reference = container::const_reference;
-    using pointer = container::pointer;
-    using const_pointer = container::const_pointer;
-    using iterator = container::iterator;
-    using const_iterator = container::const_iterator;
+    using value_type = typename container::value_type;
+    using size_type	 = typename container::size_type;
+    using difference_type = typename container::difference_type;
+    using key_compare = typename container::key_compare;
+    using allocator_type = typename container::allocator_type;
+    using reference	= typename container::reference;
+    using const_reference = typename container::const_reference;
+    using pointer = typename container::pointer;
+    using const_pointer = typename container::const_pointer;
+    using iterator = typename container::iterator;
+    using const_iterator = typename container::const_iterator;
 
     static constexpr bool stores_duplicates = false;
     static constexpr bool is_transparent = true;
@@ -102,18 +102,18 @@ public:
     using container::container;
     using key_type = key;
     using mapped_type = value;
-    using value_type = container::value_type;
-    using size_type	 = container::size_type;
-    using difference_type = container::difference_type;
-    using key_equal = container::key_equal;
-    using hasher = container::hasher;
-    using allocator_type = container::allocator_type;
-    using reference	= container::reference;
-    using const_reference = container::const_reference;
-    using pointer = container::pointer;
-    using const_pointer = container::const_pointer;
-    using iterator = container::iterator;
-    using const_iterator = container::const_iterator;
+    using value_type = typename container::value_type;
+    using size_type	 = typename container::size_type;
+    using difference_type = typename container::difference_type;
+    using key_equal = typename container::key_equal;
+    using hasher = typename container::hasher;
+    using allocator_type = typename container::allocator_type;
+    using reference	= typename container::reference;
+    using const_reference = typename container::const_reference;
+    using pointer = typename container::pointer;
+    using const_pointer = typename container::const_pointer;
+    using iterator = typename container::iterator;
+    using const_iterator = typename container::const_iterator;
 
 
     static constexpr bool stores_duplicates = false;
@@ -132,18 +132,18 @@ public:
 
     using key_type = key;
     using mapped_type = value;
-    using value_type = container::value_type;
-    using size_type	 = container::size_type;
-    using difference_type = container::difference_type;
-    using key_equal = container::key_equal;
-    using hasher = container::hasher;
-    using allocator_type = container::allocator_type;
-    using reference	= container::reference;
-    using const_reference = container::const_reference;
-    using pointer = container::pointer;
-    using const_pointer = container::const_pointer;
-    using iterator = container::iterator;
-    using const_iterator = container::const_iterator;
+    using value_type = typename container::value_type;
+    using size_type	 = typename container::size_type;
+    using difference_type = typename container::difference_type;
+    using key_equal = typename container::key_equal;
+    using hasher = typename container::hasher;
+    using allocator_type = typename container::allocator_type;
+    using reference	= typename container::reference;
+    using const_reference = typename container::const_reference;
+    using pointer = typename container::pointer;
+    using const_pointer = typename container::const_pointer;
+    using iterator = typename container::iterator;
+    using const_iterator = typename container::const_iterator;
 
     static constexpr bool stores_duplicates = true;
     static constexpr bool is_transparent = false;
