@@ -195,13 +195,13 @@ public:
     }
 
     template <json_type idx, class... Args>
-    requires(idx < std::variant_size_v<variant> && std::constructible_from<std::variant_alternative_t<static_cast<std::size_t>(idx), variant>, Args...>)
+    requires(static_cast<std::size_t>(idx) < std::variant_size_v<variant> && std::constructible_from<std::variant_alternative_t<static_cast<std::size_t>(idx), variant>, Args...>)
     constexpr idx_to_type_t<idx>& emplace( Args&&... args ){
         return value_.emplace(std::forward<Args>(args)...);
     }
 
     template <json_type idx, class U, class... Args>
-    requires(idx < std::variant_size_v<variant>, std::constructible_from<std::variant_alternative_t<static_cast<std::size_t>(idx), variant>, std::initializer_list<U>, Args...>)
+    requires(static_cast<std::size_t>(idx) < std::variant_size_v<variant>, std::constructible_from<std::variant_alternative_t<static_cast<std::size_t>(idx), variant>, std::initializer_list<U>, Args...>)
     constexpr idx_to_type_t<idx>&
     emplace( std::initializer_list<U> il, Args&&... args ){
         return value_.emplace(il, std::forward<Args>(args)...);
