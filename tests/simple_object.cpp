@@ -3,9 +3,6 @@
  * BSD 2-Clause license.
  */
 
-#include <netformats/basic_value.hpp>
-#include <netformats/basic_object.hpp>
-#include <netformats/basic_array.hpp>
 #include <netformats/basic_parser.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>

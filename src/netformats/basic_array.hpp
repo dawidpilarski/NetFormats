@@ -9,10 +9,10 @@
 
 namespace netformats::json{
 
-template<typename value, typename allocator = std::allocator<value>>
-class basic_array : public std::vector<value, allocator> {
+template<typename value>
+class basic_array : public std::vector<value> {
 public:
-    using std::vector<value, allocator>::vector;
+    using std::vector<value>::vector;
 };
 
 }

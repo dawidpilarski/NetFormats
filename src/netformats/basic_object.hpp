@@ -26,16 +26,16 @@ namespace netformats::json {
 
         template<typename T>
         concept is_iterable = requires(T x){
-            std::ranges::begin(x);
-            std::ranges::end(x);
-            std::ranges::cbegin(x);
-            std::ranges::cend(x);
+            std::begin(x);
+            std::end(x);
+            std::cbegin(x);
+            std::cend(x);
         };
 
         template<typename T>
         concept is_reverse_iterable = is_iterable<T> && requires(T x, const T &cx){
-            std::ranges::cbegin(x);
-            std::ranges::cend(x);
+            std::cbegin(x);
+            std::cend(x);
         };
     }
 
@@ -67,7 +67,9 @@ public:
     basic_object &operator=(const basic_object &) = default;
     basic_object &operator=(basic_object &&) noexcept(std::is_nothrow_move_assignable_v < storage > ) = default;
 
-    friend auto operator<=>(const basic_object &left, const basic_object &right) = default;
+    friend auto operator<=>(const basic_object &left, const basic_object &right) {
+        return left.properties <=> right.properties;
+    }
 
     [[nodiscard]] auto begin() { return std::ranges::begin(properties); }
     [[nodiscard]] auto end() { return std::ranges::end(properties); }
