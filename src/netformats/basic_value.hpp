@@ -25,7 +25,7 @@ template<typename key,
         typename storage>
 class basic_object;
 
-template<typename value, typename allocator>
+template<typename value>
 class basic_array;
 
 namespace details{
@@ -65,21 +65,15 @@ constexpr std::string to_string(json_type type){
     throw std::invalid_argument("Unknown json type");
 }
 
-template <typename string_t,
-        typename integer_t,
-        template <typename ...> typename allocator>
-class basic_value;
-
 namespace details{
     template <typename basic_value, json_type>
     class idx_to_type;
 }
 
 template <typename string_t,
-          typename integer_t,
-          template <typename ...> typename allocator = std::allocator>
+          typename integer_t>
 class basic_value{
-    using array_t = basic_array<basic_value, allocator<basic_value>>;
+    using array_t = basic_array<basic_value>;
     using object_t = basic_object<string_t, basic_value, storages::random_order_no_duplicates<string_t, basic_value>>;
 
     using variant = std::variant<

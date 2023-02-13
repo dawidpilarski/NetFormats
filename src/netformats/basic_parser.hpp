@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
+#include <iterator>
 
 /*
  * object
@@ -484,14 +485,14 @@ private:
         if(!member) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
                                              "Could not parse member");
 
-        *ins = *member;
+        (*ins).operator=(*member);
         ++ins;
         while((tokenizer.peek_next() == ',')){
             tokenizer.consume_one();
             member = consume_member(tokenizer);
             if(!member) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
                                                  "Expected member after \",\"");
-            *ins = *member;
+            (*ins).operator=(*member);
         }
     }
 
