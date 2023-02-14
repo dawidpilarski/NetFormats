@@ -31,11 +31,8 @@
 namespace netformats::json {
 
     template <typename Integer>
-    Integer create_integer(const char* begin, const char* end);
-
-    template <>
-    inline long long create_integer<long long>(const char* begin, const char* end){
-        long long integer;
+    Integer create_integer(const char* begin, const char* end){
+        Integer integer;
         auto result = std::from_chars(begin, end, integer);
         if(result.ec == std::errc{}){
             return integer;
@@ -433,29 +430,29 @@ private:
 
         if(auto object = consume_object(tokenizer); object){
             consume_whitespace(tokenizer);
-            return value(*object);
+            return value(typename value::template in_place_index_t<json_type::object>{},*object);
         }
         if(auto array = consume_array(tokenizer); array){
             consume_whitespace(tokenizer);
-            return value{*array};
+            return value{typename value::template in_place_index_t<json_type::array>{}, *array};
         }
         if(auto string = consume_string(tokenizer); string){
             consume_whitespace(tokenizer);
-            return value{*string};
+            return value{typename value::template in_place_index_t<json_type::string>{},*string};
         }
         if(auto boolean = consume_boolean(tokenizer); boolean){
             consume_whitespace(tokenizer);
-            return value{*boolean};
+            return value{typename value::template in_place_index_t<json_type::boolean>{},*boolean};
         }
         if(auto null = consume_null(tokenizer); null){
             consume_whitespace(tokenizer);
-            return value{basic_parser::null{}};
+            return value{typename value::template in_place_index_t<json_type::null>{},basic_parser::null{}};
         }
         if(auto number = consume_number(tokenizer); number){
             consume_whitespace(tokenizer);
             auto idx  = number->index();
-            if(idx == 0) return value{std::get<integer>(*number)};
-            if(idx == 1) return value{std::get<floating_point>(*number)};
+            if(idx == 0) return value{typename value::template in_place_index_t<json_type::integer>{},std::get<0>(*number)};
+            if(idx == 1) return value{typename value::template in_place_index_t<json_type::floating_point>{},std::get<1>(*number)};
         }
 
         throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
