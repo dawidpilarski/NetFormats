@@ -1,6 +1,7 @@
 # NetFormats (alpha)
 
-![linux clang build](https://github.com/dawidpilarski/NetFormats/actions/workflows/build-linux-clang.yml/badge.svg)
+![linux clang 15 build](https://github.com/dawidpilarski/NetFormats/actions/workflows/build-linux-clang.yml/badge.svg)
+![linux gcc 12 build](https://github.com/dawidpilarski/NetFormats/actions/workflows/build-linux-gcc.yml/badge.svg)
 
 A header only, C++ library designed to help people with parsing popular
 networking-related formats. Some of those include:
