@@ -15,29 +15,10 @@
 #include <cassert>
 #include <netformats/storage_defs.hpp>
 #include <netformats/basic_value.hpp>
+#include <netformats/type_traits.hpp>
 
 
 namespace netformats::json {
-    namespace details{
-
-        template<typename T>
-        struct always_false : std::false_type {
-        };
-
-        template<typename T>
-        concept is_iterable = requires(T x){
-            std::begin(x);
-            std::end(x);
-            std::cbegin(x);
-            std::cend(x);
-        };
-
-        template<typename T>
-        concept is_reverse_iterable = is_iterable<T> && requires(T x, const T &cx){
-            std::cbegin(x);
-            std::cend(x);
-        };
-    }
 
 template<typename key,
         typename value,
@@ -67,8 +48,8 @@ public:
     basic_object &operator=(const basic_object &) = default;
     basic_object &operator=(basic_object &&) noexcept(std::is_nothrow_move_assignable_v < storage > ) = default;
 
-    friend auto operator<=>(const basic_object &left, const basic_object &right) {
-        return left.properties <=> right.properties;
+    friend bool operator==(const basic_object &left, const basic_object &right) {
+        return left.properties == right.properties;
     }
 
     [[nodiscard]] auto begin() { return std::ranges::begin(properties); }
@@ -77,12 +58,12 @@ public:
     [[nodiscard]] auto end() const { return std::ranges::end(properties); }
     [[nodiscard]] auto cbegin() const { return std::ranges::cbegin(properties); }
     [[nodiscard]] auto cend() const { return std::ranges::cend(properties); }
-    [[nodiscard]] auto rbegin() requires(details::is_reverse_iterable <storage>) { return std::ranges::rbegin(properties); }
-    [[nodiscard]] auto rend() requires(details::is_reverse_iterable <storage>) { return std::ranges::rend(properties); }
-    [[nodiscard]] auto rbegin() const requires(details::is_reverse_iterable <storage>) { return std::ranges::rbegin(properties); }
-    [[nodiscard]] auto rend() const requires(details::is_reverse_iterable <storage>) { return std::ranges::rend(properties); }
-    [[nodiscard]] auto crbegin() const requires(details::is_reverse_iterable <storage>) { return std::ranges::crbegin(properties); }
-    [[nodiscard]] auto crend() const requires(details::is_reverse_iterable <storage>) { return std::ranges::crend(properties); }
+    [[nodiscard]] auto rbegin() requires(::netformats::details::is_reverse_iterable <storage>) { return std::ranges::rbegin(properties); }
+    [[nodiscard]] auto rend() requires(::netformats::details::is_reverse_iterable <storage>) { return std::ranges::rend(properties); }
+    [[nodiscard]] auto rbegin() const requires(::netformats::details::is_reverse_iterable <storage>) { return std::ranges::rbegin(properties); }
+    [[nodiscard]] auto rend() const requires(::netformats::details::is_reverse_iterable <storage>) { return std::ranges::rend(properties); }
+    [[nodiscard]] auto crbegin() const requires(::netformats::details::is_reverse_iterable <storage>) { return std::ranges::crbegin(properties); }
+    [[nodiscard]] auto crend() const requires(::netformats::details::is_reverse_iterable <storage>) { return std::ranges::crend(properties); }
 
     //todo handle transparent and non transparent comparisons
     template<std::equality_comparable_with <key> key_comparable>

@@ -31,7 +31,8 @@ TEST_CASE("Simple root with object"){
     auto result = parser_.parse("{}");
 
     CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<netformats::json::json_type::object>() == parser::object{});
+    auto equal = result.get<netformats::json::json_type::object>() == parser::object{};
+    CHECK(equal);
 }
 
 TEST_CASE("Simple root wtih array"){

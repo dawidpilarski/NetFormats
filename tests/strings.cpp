@@ -43,14 +43,18 @@ TEST_CASE("String with escaped zero hex character"){
     CHECK(result.get<netformats::json::json_type::string>() == std::string{'\0'});
 }
 
-TEST_CASE("String with 0\\u00000 hex character"){
+TEST_CASE("String with 0null0 hex character"){
     parser parser_;
     auto result = parser_.parse(R"("0\u00000")");
 
     CHECK(result.index() == netformats::json::json_type::string);
     std::string expectedString = {'0', '\0', '0'};
 
-    CHECK(result.get<netformats::json::json_type::string>() == expectedString);
+    auto string = result.get<netformats::json::json_type::string>();
+
+    CHECK(string[0] == '0');
+    CHECK(string[1] == '\0');
+    CHECK(string[2] == '0');
 }
 
 TEST_CASE("String with escaped hex character"){
