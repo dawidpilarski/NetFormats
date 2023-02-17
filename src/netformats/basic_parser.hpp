@@ -41,13 +41,14 @@ namespace netformats::json {
         }
     }
 
-template <typename string_,
-          typename integer_,
-          typename boolean_ = bool,
-          typename floating_point_ = long double>
+template <typename null_t,
+        typename boolean_t,
+        typename float_t,
+        typename integer_t,
+        typename string_t>
 class basic_parser{
 public:
-    using value = basic_value<string_, integer_>;
+    using value = basic_value<null_t, boolean_t, float_t, integer_t, string_t>;
     using object = typename value::object;
     using array = typename value::array;
     using string = typename value::string;
@@ -422,7 +423,7 @@ private:
         return true;
     }
 
-    std::optional<basic_value<string, integer>> consume_element(unicode::tokenizer& tokenizer){
+    std::optional<value> consume_element(unicode::tokenizer& tokenizer){
         consume_whitespace(tokenizer);
 
         auto next_character = tokenizer.peek_next();
@@ -473,7 +474,7 @@ private:
         if(!element) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n"
                                                                                                          "Expected element value after \":\"");
 
-        return std::pair<std::string, basic_value<std::string, long long>>{*member_key, *element};
+        return std::pair<std::string, value>{*member_key, *element};
     }
 
     template <typename inserter>

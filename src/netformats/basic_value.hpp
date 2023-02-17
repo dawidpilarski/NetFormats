@@ -66,16 +66,19 @@ namespace details{
     class idx_to_type;
 }
 
-template <typename string_t,
-          typename integer_t>
+template <typename null_t,
+          typename boolean_t,
+          typename float_t,
+          typename integer_t,
+          typename string_t>
 class basic_value{
     using array_t = basic_array<basic_value>;
     using object_t = basic_object<string_t, basic_value, storages::random_order_no_duplicates<string_t, basic_value>>;
 
     using variant = std::variant<
             null_t,
-            bool,
-            long double,
+            boolean_t,
+            float_t,
             integer_t,
             string_t,
             array_t,
@@ -84,8 +87,8 @@ class basic_value{
 public:
 
     using null = null_t;
-    using boolean = bool;
-    using floating_point = long double;
+    using boolean = boolean_t;
+    using floating_point = float_t;
     using integer = integer_t;
     using string = string_t;
     using array = array_t;
