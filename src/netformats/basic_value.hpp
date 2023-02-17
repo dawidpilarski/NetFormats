@@ -26,7 +26,7 @@ template<typename key,
         typename storage>
 class basic_object;
 
-template<typename value>
+template<typename value, typename allocator>
 class basic_array;
 
 
@@ -74,8 +74,8 @@ public:
     using floating_point = typename config::floating_point;
     using integer = typename config::integer;
     using string = typename config::string;
-    using array = basic_array<basic_value>;
-    using object = basic_object<typename config::string, basic_value, storages::random_order_no_duplicates<typename config::string, basic_value>>;
+    using array = basic_array<basic_value, typename config::template allocator<basic_value>>;
+    using object = basic_object<typename config::string, basic_value, typename config::template storage<basic_value>>;
 
 private:
     using variant = std::variant<
@@ -88,8 +88,6 @@ private:
             object>;
 
 public:
-
-
 
     template <typename T>
     struct can_store{
