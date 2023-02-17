@@ -8,6 +8,7 @@
 #include <netformats/basic_object.hpp>
 #include <netformats/basic_array.hpp>
 #include <netformats/unicode_tokenizer.hpp>
+#include <netformats/json_config.hpp>
 #include <charconv>
 
 #include <array>
@@ -41,21 +42,21 @@ namespace netformats::json {
         }
     }
 
-template <typename null_t,
-        typename boolean_t,
-        typename float_t,
-        typename integer_t,
-        typename string_t>
+template <netformats::details::json_config config>
 class basic_parser{
 public:
-    using value = basic_value<null_t, boolean_t, float_t, integer_t, string_t>;
+    using null = typename config::null;
+    using boolean = typename config::boolean;
+    using floating_point = typename config::floating_point;
+    using integer = typename config::integer;
+    using string = typename config::string;
+    template <typename T>
+    using allocator = typename config::template allocator<T>;
+
+    using value = basic_value<config>;
     using object = typename value::object;
     using array = typename value::array;
-    using string = typename value::string;
-    using integer = typename value::integer;
-    using boolean = typename value::boolean;
-    using floating_point = typename value::floating_point;
-    using null = typename value::null;
+
 
     //todo handle allocators correctly
     explicit basic_parser(std::allocator<int> alloc) : root_allocator(std::move(alloc)){}

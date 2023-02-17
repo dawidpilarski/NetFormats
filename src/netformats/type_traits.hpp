@@ -30,4 +30,14 @@ namespace netformats::details {
         std::cbegin(x);
         std::cend(x);
     };
+
+    template <typename T>
+    concept json_config = requires(){
+        typename T::null;
+        typename T::boolean;
+        typename T::floating_point;
+        typename T::integer;
+        typename T::string;
+        typename T::template allocator<void>;
+    };
 }

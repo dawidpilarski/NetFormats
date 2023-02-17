@@ -8,8 +8,9 @@
 
 #include <netformats/basic_parser.hpp>
 #include <netformats/null.hpp>
+#include <netformats/json_config.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 
-using default_parser = netformats::json::basic_parser<netformats::json::null_t, bool, long double, long long, std::string>;
+using default_parser = netformats::json::basic_parser<netformats::json::default_config<>>;
