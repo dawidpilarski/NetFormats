@@ -21,9 +21,7 @@
 
 namespace netformats::json {
 
-template<typename key,
-        typename value,
-        typename storage>
+template<typename storage>
 class basic_object;
 
 template<typename value, typename allocator>
@@ -75,7 +73,7 @@ public:
     using integer = typename config::integer;
     using string = typename config::string;
     using array = basic_array<basic_value, typename config::template allocator<basic_value>>;
-    using object = basic_object<typename config::string, basic_value, typename config::template storage<basic_value>>;
+    using object = basic_object<typename config::template storage<basic_value>>;
 
 private:
     using variant = std::variant<
@@ -245,19 +243,19 @@ public:
     template <typename U>
     requires can_store_v<U>
     constexpr U* get_if() &{
-        return std::get_if<U>(value_);
+        return std::get_if<U>(&value_);
     }
 
     template <typename U>
     requires can_store_v<U>
     constexpr U const * get_if() const &{
-        return std::get_if<U>(value_);
+        return std::get_if<U>(&value_);
     }
 
     template <typename U>
     requires can_store_v<U>
     constexpr U* get_if() &&{
-        return std::get_if<U>(value_);
+        return std::get_if<U>(&value_);
     }
 
     template <json_type idx>

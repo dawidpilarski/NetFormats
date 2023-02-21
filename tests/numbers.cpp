@@ -52,6 +52,7 @@ TEST_CASE("Single digit"){
 
         REQUIRE(result.index() == netformats::json::json_type::integer);
         CAPTURE(result.get<parser::integer>());
+        static_assert(parser::value::can_store_v<parser::integer>);
         CHECK(result.get<parser::integer>() == digit);
 
         result = parser_.parse("-" + std::to_string(digit));

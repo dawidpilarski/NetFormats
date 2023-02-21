@@ -20,13 +20,11 @@
 
 namespace netformats::json {
 
-template<typename key,
-        typename value,
-        typename storage = storages::random_order_no_duplicates<key, value>>
+template<typename storage>
 class basic_object {
 public:
-    using key_type = key;
-    using mapped_type = value;
+    using key_type = typename storage::key_type;
+    using mapped_type = typename storage::mapped_type;
     using value_type = typename storage::value_type;
     using size_type	 = typename storage::size_type;
     using difference_type = typename storage::difference_type;
@@ -37,13 +35,16 @@ public:
     using const_pointer = typename storage::const_pointer;
     using iterator = typename storage::iterator;
     using const_iterator = typename storage::const_iterator;
+    using node_type = typename storage::node_type;
 
     basic_object() = default;
     basic_object(const basic_object &) = default;
     basic_object(basic_object &&) noexcept(std::is_nothrow_move_constructible_v < storage > ) = default;
-    explicit basic_object(typename storage::allocator_type allocator) noexcept(std::is_nothrow_move_constructible_v <
-                                                                      typename storage::allocator_type > ): storage(
+    explicit basic_object(allocator_type allocator) noexcept(std::is_nothrow_constructible_v < storage,
+                                                                      allocator_type > ): properties(
             std::move(allocator)) {}
+    basic_object(std::initializer_list<value_type> init, const allocator_type& alloc = allocator_type{} ) :
+    properties(init, alloc){}
 
     basic_object &operator=(const basic_object &) = default;
     basic_object &operator=(basic_object &&) noexcept(std::is_nothrow_move_assignable_v < storage > ) = default;
@@ -66,106 +67,140 @@ public:
     [[nodiscard]] auto crend() const requires(::netformats::details::is_reverse_iterable <storage>) { return std::ranges::crend(properties); }
 
     //todo handle transparent and non transparent comparisons
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] auto find(const key_comparable &comparable) const requires (storage::is_transparent) {
         return find_(comparable);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] auto find(const key_comparable &comparable) requires (storage::is_transparent) {
         return find_(comparable);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] bool contains(const key_comparable &comparable) const requires (storage::is_transparent) {
         return properties.find(comparable) != std::ranges::end(properties);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] bool has_member(const key_comparable &comparable) const requires (storage::is_transparent) {
         return contains(comparable);
     }
 
-    [[nodiscard]] auto find(const key& searched_key) const requires (!storage::is_transparent) {
+    template<typename T, std::equality_comparable_with<key_type> key_comparable>
+    requires (mapped_type::template can_store_v<T>)
+    [[nodiscard]] bool has_member_of_type(const key_comparable &comparable) const requires (storage::is_transparent) {
+        auto it = find(comparable);
+        if(it == end()) return false;
+
+        return it->second.template get_if<T>() != nullptr;
+    }
+
+    template<json_type idx, std::equality_comparable_with<key_type> key_comparable>
+    [[nodiscard]] bool has_member_of_type(const key_comparable &comparable) const requires (storage::is_transparent) {
+        auto it = find(comparable);
+        if(it == end()) return false;
+
+        return it->second.index() == idx;
+    }
+
+    [[nodiscard]] auto find(const key_type& searched_key) const requires (!storage::is_transparent) {
         return find_(searched_key);
     }
 
-    [[nodiscard]] auto find(const key& searched_key) requires (!storage::is_transparent) {
+    [[nodiscard]] auto find(const key_type& searched_key) requires (!storage::is_transparent) {
         return find_(searched_key);
     }
 
-    [[nodiscard]] bool contains(const key& searched_key) const requires (!storage::is_transparent) {
+    [[nodiscard]] bool contains(const key_type& searched_key) const requires (!storage::is_transparent) {
         return properties.find(searched_key) != std::ranges::end(properties);
     }
 
-    [[nodiscard]] bool has_member(const key& searched_key) const requires (!storage::is_transparent) {
+    [[nodiscard]] bool has_member(const key_type& searched_key) const requires (!storage::is_transparent) {
         return contains(searched_key);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<typename T>
+    requires (mapped_type::template can_store_v<T>)
+    [[nodiscard]] bool has_member_of_type(const key_type &comparable) const requires (!storage::is_transparent) {
+        auto it = find(comparable);
+        if(it == end()) return false;
+
+        return it->second.template get_if<T>() != nullptr;
+    }
+
+    template<json_type idx>
+    [[nodiscard]] bool has_member_of_type(const key_type &comparable) const requires (!storage::is_transparent) {
+        auto it = find(comparable);
+        if(it == end()) return false;
+
+        return it->second.index() == idx;
+    }
+
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] decltype(auto) find_all(const key_comparable& comparable) requires(storage::is_transparent && storage::stores_duplicates){
         return find_all_(comparable);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] decltype(auto) find_all(const key_comparable& comparable) const requires(storage::is_transparent && storage::stores_duplicates){
         return find_all_(comparable);
     }
 
-    [[nodiscard]] decltype(auto) find_all(const key& searched_key) requires(!storage::is_transparent && storage::stores_duplicates){
+    [[nodiscard]] decltype(auto) find_all(const key_type& searched_key) requires(!storage::is_transparent && storage::stores_duplicates){
         return find_all_(searched_key);
     }
 
-    [[nodiscard]] decltype(auto) find_all(const key& searched_key) const requires(!storage::is_transparent && storage::stores_duplicates){
+    [[nodiscard]] decltype(auto) find_all(const key_type& searched_key) const requires(!storage::is_transparent && storage::stores_duplicates){
         return find_all_(searched_key);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] decltype(auto) get_member(const key_comparable& comparable) requires(storage::is_transparent){
         return get_member_(comparable);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] decltype(auto) get_member(const key_comparable& comparable) const requires (storage::is_transparent){
         return get_member_(comparable);
     }
 
-    [[nodiscard]] decltype(auto) get_member(const key& comparable) requires(!storage::is_transparent){
+    [[nodiscard]] decltype(auto) get_member(const key_type& comparable) requires(!storage::is_transparent){
         return get_member_(comparable);
     }
 
-    [[nodiscard]] decltype(auto) get_member(const key& comparable) const requires (!storage::is_transparent){
+    [[nodiscard]] decltype(auto) get_member(const key_type& comparable) const requires (!storage::is_transparent){
         return get_member_(comparable);
     }
 
-    template<typename value_t, std::equality_comparable_with <key> key_comparable>
-    [[nodiscard]] value_t& get_member(const key_comparable& comparable) requires(storage::is_transparent && value::template can_store_v<value_t>){
+    template<typename value_t, std::equality_comparable_with<key_type> key_comparable>
+    [[nodiscard]] value_t& get_member(const key_comparable& comparable) requires(storage::is_transparent && mapped_type::template can_store_v<value_t>){
         return get_member_(comparable).template get<value_t>();
     }
 
-    template<typename value_t, std::equality_comparable_with <key> key_comparable>
-    [[nodiscard]] const value_t& get_member(const key_comparable& comparable) const requires (storage::is_transparent && value::template can_store_v<value_t>){
+    template<typename value_t, std::equality_comparable_with<key_type> key_comparable>
+    [[nodiscard]] const value_t& get_member(const key_comparable& comparable) const requires (storage::is_transparent && mapped_type::template can_store_v<value_t>){
         return get_member_(comparable).template get<value_t>();
     }
 
     template <typename value_t>
-    [[nodiscard]] value_t get_member(const key& comparable) requires(!storage::is_transparent && value::template can_store_v<value_t>){
+    [[nodiscard]] value_t get_member(const key_type& comparable) requires(!storage::is_transparent && mapped_type::template can_store_v<value_t>){
         return get_member_(comparable).template get<value_t>();
     }
 
     template <typename value_t>
-    [[nodiscard]] decltype(auto) get_member(const key& comparable) const requires (!storage::is_transparent && value::template can_store_v<value_t>){
+    [[nodiscard]] decltype(auto) get_member(const key_type& comparable) const requires (!storage::is_transparent && mapped_type::template can_store_v<value_t>){
         return get_member_(comparable).template get<value_t>();
     }
 
-    template <std::equality_comparable_with<key> key_comparable>
+    template <std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] std::optional<json_type> member_type(const key_comparable& comparable) const requires(storage::is_transparent){
         auto it = find(comparable);
         if(it == end()) return {};
         return it->second.index();
     }
 
-    [[nodiscard]] std::optional<json_type> member_type(const key& comparable) const requires(!storage::is_transparent){
+    [[nodiscard]] std::optional<json_type> member_type(const key_type& comparable) const requires(!storage::is_transparent){
         auto it = find(comparable);
         if(it == end()) return {};
         return it->second.index();
@@ -174,33 +209,33 @@ public:
     template<typename key_comparable, typename value_t>
     auto insert_or_assign(key_comparable&& comparable, value_t&& updated_element)
     requires(storage::is_transparent &&
-             std::equality_comparable_with<key, key_comparable> &&
-             std::constructible_from<key, decltype(comparable)> &&
-             std::assignable_from<value, decltype(updated_element)> &&
-             std::constructible_from<value, decltype(updated_element)>){
+             std::equality_comparable_with<key_type, key_comparable> &&
+             std::constructible_from<key_type, decltype(comparable)> &&
+             std::assignable_from<mapped_type, decltype(updated_element)> &&
+             std::constructible_from<mapped_type, decltype(updated_element)>){
         auto it = find(comparable);
         if(it == end()){
-            it->second = std::forward<value>(updated_element);
+            it->second = std::forward<value_t>(updated_element);
             return it;
         }
 
         return properties.emplace(std::forward<key_comparable>(comparable), std::forward<value_t>(updated_element));
     }
 
-    template<typename key_t = key, typename value_t>
-    auto insert_or_assign(key&& comparable, value_t&& updated_element)
+    template<typename key_t = key_type, typename value_t>
+    auto insert_or_assign(key_type&& comparable, value_t&& updated_element)
     requires(
              !storage::is_transparent &&
-             std::same_as<std::remove_cvref_t<key_t>, key> &&
-             std::assignable_from<value, decltype(updated_element)> &&
-             std::constructible_from<value, decltype(updated_element)>){
+             std::same_as<std::remove_cvref_t<key_t>, key_type> &&
+             std::assignable_from<mapped_type, decltype(updated_element)> &&
+             std::constructible_from<mapped_type, decltype(updated_element)>){
         auto it = find(comparable);
         if(it == end()){
-            it->second = std::forward<value>(updated_element);
+            it->second = std::forward<value_t>(updated_element);
             return it;
         }
 
-        return properties.emplace(std::forward<key>(comparable), std::forward<value_t>(updated_element));
+        return properties.emplace(std::forward<key_type>(comparable), std::forward<value_t>(updated_element));
     }
 
     [[nodiscard]] bool empty() const {return properties.empty();}
@@ -209,13 +244,13 @@ public:
     void clear() noexcept {return properties.clear();}
 
     template <typename T>
-    auto insert(const_iterator it, T&& value_) requires(std::constructible_from<std::pair<key, value>, decltype(value_)>){
-        return properties.insert(it, value_);
+    auto insert(const_iterator it, T&& value_) requires(std::constructible_from<value_type , decltype(value_)>){
+        return properties.insert(it, std::forward<T>(value_));
     }
 
     template <typename T>
-    auto insert(T&& value_) requires(std::constructible_from<std::pair<key, value>, decltype(value_)>){
-        return properties.insert(value_);
+    auto insert(T&& value_) requires(std::constructible_from<value_type , decltype(value_)>){
+        return properties.insert(std::forward<T>(value_));
     }
 
     template <typename iter>
@@ -228,7 +263,7 @@ public:
         return properties.erase(element);
     }
 
-    template <std::equality_comparable_with<key> key_comparable>
+    template <std::equality_comparable_with<key_type> key_comparable>
     std::size_t erase(key_comparable&& key_search) requires (storage::is_transparent){
         auto range = find_all(key_search);
         auto distance = std::distance(range.first, range.second);
@@ -236,7 +271,7 @@ public:
         return distance;
     }
 
-    std::size_t erase(const key& property_key) requires (!storage::is_transparent){
+    std::size_t erase(const key_type& property_key) requires (!storage::is_transparent){
         auto range = find_all(property_key);
         auto distance = std::distance(range.first, range.second);
         properties.erase(range.first, range.second);
@@ -247,13 +282,13 @@ public:
         properties.swap(other.properties);
     }
 
-    template <std::equality_comparable_with<key> key_comparable>
+    template <std::equality_comparable_with<key_type> key_comparable>
     [[nodiscard]] std::size_t count(const key_comparable& searched_comparable) const requires(storage::is_transparent){
         auto it = find_all_(searched_comparable);
         return std::distance(it.first, it.second);
     }
 
-    [[nodiscard]] std::size_t count(const key& searched_key) const requires(!storage::is_transparent){
+    [[nodiscard]] std::size_t count(const key_type& searched_key) const requires(!storage::is_transparent){
         auto it = find_all_(searched_key);
         return std::distance(it.first, it.second);
     }
@@ -272,46 +307,46 @@ public:
     }
 private:
 
-    template<std::equality_comparable_with <key> key_comparable>
-    value& get_member_(const key_comparable& comparable){
+    template<std::equality_comparable_with <key_type> key_comparable>
+    mapped_type& get_member_(const key_comparable& comparable){
         assert(contains(comparable));
         return find(comparable)->second;
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
-    const value& get_member_(const key_comparable& comparable) const {
+    template<std::equality_comparable_with <key_type> key_comparable>
+    const mapped_type& get_member_(const key_comparable& comparable) const {
         assert(contains(comparable));
         return find(comparable)->second;
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with <key_type> key_comparable>
     decltype(auto) find_(const key_comparable &searched_key) const {
         return properties.find(searched_key);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with <key_type> key_comparable>
     auto find_(const key_comparable &searched_key) {
         return properties.find(searched_key);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with <key_type> key_comparable>
     auto find_all_(const key_comparable& comparable) requires(storage::stores_duplicates){
         return properties.equal_range(comparable);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with <key_type> key_comparable>
     auto find_all_(const key_comparable& comparable) const requires(storage::stores_duplicates){
         return properties.equal_range(comparable);
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with <key_type> key_comparable>
     auto find_all_(const key_comparable& comparable) requires(!storage::stores_duplicates){
         auto it = properties.find(comparable);
         if(it == end()) return std::pair{it, it};
         return std::pair{it, it+1};
     }
 
-    template<std::equality_comparable_with <key> key_comparable>
+    template<std::equality_comparable_with <key_type> key_comparable>
     auto find_all_(const key_comparable& comparable) const requires(!storage::stores_duplicates){
         auto it = properties.find(comparable);
         if(it == end()) return std::pair{it, it};
