@@ -21,12 +21,10 @@
 
 namespace netformats::json {
 
-template<typename key,
-        typename value,
-        typename storage>
+template<typename storage>
 class basic_object;
 
-template<typename value>
+template<typename value, typename allocator>
 class basic_array;
 
 
@@ -66,30 +64,28 @@ namespace details{
     class idx_to_type;
 }
 
-template <typename string_t,
-          typename integer_t>
+template <netformats::details::json_config config>
 class basic_value{
-    using array_t = basic_array<basic_value>;
-    using object_t = basic_object<string_t, basic_value, storages::random_order_no_duplicates<string_t, basic_value>>;
+public:
+    using null = typename config::null;
+    using boolean = typename config::boolean;
+    using floating_point = typename config::floating_point;
+    using integer = typename config::integer;
+    using string = typename config::string;
+    using array = basic_array<basic_value, typename config::template allocator<basic_value>>;
+    using object = basic_object<typename config::template storage<basic_value>>;
 
+private:
     using variant = std::variant<
-            null_t,
-            bool,
-            long double,
-            integer_t,
-            string_t,
-            array_t,
-            object_t>;
+            null,
+            boolean,
+            floating_point,
+            integer,
+            string,
+            array ,
+            object>;
 
 public:
-
-    using null = null_t;
-    using boolean = bool;
-    using floating_point = long double;
-    using integer = integer_t;
-    using string = string_t;
-    using array = array_t;
-    using object = object_t;
 
     template <typename T>
     struct can_store{
@@ -247,19 +243,19 @@ public:
     template <typename U>
     requires can_store_v<U>
     constexpr U* get_if() &{
-        return std::get_if<U>(value_);
+        return std::get_if<U>(&value_);
     }
 
     template <typename U>
     requires can_store_v<U>
     constexpr U const * get_if() const &{
-        return std::get_if<U>(value_);
+        return std::get_if<U>(&value_);
     }
 
     template <typename U>
     requires can_store_v<U>
     constexpr U* get_if() &&{
-        return std::get_if<U>(value_);
+        return std::get_if<U>(&value_);
     }
 
     template <json_type idx>

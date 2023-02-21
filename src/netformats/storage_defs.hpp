@@ -22,8 +22,8 @@ namespace netformats::json::storages{
     using container = std::vector <std::pair<key, value>, allocator>;
     using container::container;
 
-    using key_type = key;
-    using mapped_type = value;
+    using key_type = typename container::key_type;
+    using mapped_type = typename container::mapped_type;
     using value_type = typename container::value_type;
     using size_type	 = typename container::size_type;
     using difference_type = typename container::difference_type;
@@ -49,8 +49,8 @@ public:
     using container = std::multimap <key, value, std::less<>, allocator>;
     using container::container;
 
-    using key_type = key;
-    using mapped_type = value;
+    using key_type = typename container::key_type;
+    using mapped_type = typename container::mapped_type;
     using value_type = typename container::value_type;
     using size_type	 = typename container::size_type;
     using difference_type = typename container::difference_type;
@@ -75,8 +75,8 @@ public:
     using container = std::map<key, value, std::less<>, allocator>;
     using container::container;
 
-    using key_type = key;
-    using mapped_type = value;
+    using key_type = typename container::key_type;
+    using mapped_type = typename container::mapped_type;
     using value_type = typename container::value_type;
     using size_type	 = typename container::size_type;
     using difference_type = typename container::difference_type;
@@ -100,8 +100,8 @@ class random_order_no_duplicates : public std::unordered_map<key, value, std::ha
 public:
     using container = std::unordered_map<key, value, std::hash<key>, std::equal_to<key>, allocator>;
     using container::container;
-    using key_type = key;
-    using mapped_type = value;
+    using key_type = typename container::key_type;
+    using mapped_type = typename container::mapped_type;
     using value_type = typename container::value_type;
     using size_type	 = typename container::size_type;
     using difference_type = typename container::difference_type;
@@ -130,8 +130,8 @@ public:
     using container = std::unordered_multimap<key, value, hash, equal_to, allocator>;
     using container::container;
 
-    using key_type = key;
-    using mapped_type = value;
+    using key_type = typename container::key_type;
+    using mapped_type = typename container::mapped_type;
     using value_type = typename container::value_type;
     using size_type	 = typename container::size_type;
     using difference_type = typename container::difference_type;

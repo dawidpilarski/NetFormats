@@ -3,12 +3,9 @@
  * BSD 2-Clause license.
  */
 
-#include <netformats/basic_parser.hpp>
+#include "test_defs.hpp"
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
-
-using parser = netformats::json::basic_parser<std::string, long long>;
+using parser = default_parser;
 
 TEST_CASE("Simple integer"){
 
@@ -55,6 +52,7 @@ TEST_CASE("Single digit"){
 
         REQUIRE(result.index() == netformats::json::json_type::integer);
         CAPTURE(result.get<parser::integer>());
+        static_assert(parser::value::can_store_v<parser::integer>);
         CHECK(result.get<parser::integer>() == digit);
 
         result = parser_.parse("-" + std::to_string(digit));

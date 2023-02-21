@@ -7,6 +7,8 @@
 
 #include <optional>
 
+namespace netformats::json{
+
 class null_t{
 public:
     null_t([[maybe_unused]] const std::nullopt_t& null){};
@@ -21,3 +23,4 @@ public:
 };
 
 static inline const null_t null{};
+}

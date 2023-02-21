@@ -8,6 +8,7 @@
 #include <netformats/basic_object.hpp>
 #include <netformats/basic_array.hpp>
 #include <netformats/unicode_tokenizer.hpp>
+#include <netformats/json_config.hpp>
 #include <charconv>
 
 #include <array>
@@ -30,8 +31,8 @@
 
 namespace netformats::json {
 
-    template <typename Integer>
-    Integer create_integer(const char* begin, const char* end){
+    template <typename Integer, typename Alloc>
+    Integer create_integer(const char* begin, const char* end, [[maybe_unused]] Alloc allocator){
         Integer integer;
         auto result = std::from_chars(begin, end, integer);
         if(result.ec == std::errc{}){
@@ -41,24 +42,25 @@ namespace netformats::json {
         }
     }
 
-template <typename string_,
-          typename integer_,
-          typename boolean_ = bool,
-          typename floating_point_ = long double>
+template <netformats::details::json_config config>
 class basic_parser{
 public:
-    using value = basic_value<string_, integer_>;
+    using null = typename config::null;
+    using boolean = typename config::boolean;
+    using floating_point = typename config::floating_point;
+    using integer = typename config::integer;
+    using string = typename config::string;
+    template <typename T>
+    using allocator = typename config::template allocator<T>;
+
+    using value = basic_value<config>;
     using object = typename value::object;
     using array = typename value::array;
-    using string = typename value::string;
-    using integer = typename value::integer;
-    using boolean = typename value::boolean;
-    using floating_point = typename value::floating_point;
-    using null = typename value::null;
+
 
     //todo handle allocators correctly
-    explicit basic_parser(std::allocator<int> alloc) : root_allocator(std::move(alloc)){}
-    basic_parser() : basic_parser(std::allocator<int>{}){}
+    explicit basic_parser(allocator<null> alloc) : root_allocator(std::move(alloc)){}
+    basic_parser() : basic_parser(allocator<null>{}){}
 
 
     [[nodiscard]] value parse(std::string_view json){
@@ -68,11 +70,13 @@ public:
             throw "Could not parse json. Empty?";
         }
 
-        return *result;
+        return std::move(*result);
     }
 
+    allocator<null> get_allocator(){return root_allocator;}
+
 private:
-    std::allocator<int> root_allocator;
+    allocator<null> root_allocator;
 
     constexpr void consume_whitespace(unicode::tokenizer &tokenizer) {
         auto whitespace_characters = {u8'\u0020', u8'\u000A', u8'\u000D', u8'\u0009'};
@@ -238,7 +242,7 @@ private:
         const auto consumed_exponent = consume_exponent(tokenizer);
 
         if (!consumed_fraction && !consumed_exponent) {
-            return create_integer<integer>(*consumed_integer, tokenizer.current_iterator() + 1);
+            return create_integer<integer>(*consumed_integer, tokenizer.current_iterator() + 1, get_allocator());
         }
 
         long double number;
@@ -344,8 +348,8 @@ private:
         return *next_character;
     }
 
-    std::optional<std::string> consume_characters(unicode::tokenizer &tokenizer) {
-        std::string characters;
+    std::optional<string> consume_characters(unicode::tokenizer &tokenizer) {
+        string characters{get_allocator()};
         std::optional<char32_t> character;
 
         while ((character = consume_character(tokenizer))) {
@@ -364,7 +368,7 @@ private:
         return characters;
     }
 
-    std::optional<std::string> consume_string(unicode::tokenizer &tokenizer) {
+    std::optional<string> consume_string(unicode::tokenizer &tokenizer) {
         std::optional<char32_t> next_character = tokenizer.peek_next();
         if (next_character != '\"') return {};
 
@@ -378,8 +382,8 @@ private:
 
         tokenizer.consume_one();
 
-        if (result.has_value()) return *result;
-        return std::string{""};
+        if (result.has_value()) return result;
+        return string{get_allocator()};
     }
 
     void consume_character(unicode::tokenizer& tokenizer, char character){
@@ -422,7 +426,7 @@ private:
         return true;
     }
 
-    std::optional<basic_value<string, integer>> consume_element(unicode::tokenizer& tokenizer){
+    std::optional<value> consume_element(unicode::tokenizer& tokenizer){
         consume_whitespace(tokenizer);
 
         auto next_character = tokenizer.peek_next();
@@ -430,19 +434,19 @@ private:
 
         if(auto object = consume_object(tokenizer); object){
             consume_whitespace(tokenizer);
-            return value(typename value::template in_place_index_t<json_type::object>{},*object);
+            return value(typename value::template in_place_index_t<json_type::object>{}, std::move(*object));
         }
         if(auto array = consume_array(tokenizer); array){
             consume_whitespace(tokenizer);
-            return value{typename value::template in_place_index_t<json_type::array>{}, *array};
+            return value{typename value::template in_place_index_t<json_type::array>{}, std::move(*array)};
         }
         if(auto string = consume_string(tokenizer); string){
             consume_whitespace(tokenizer);
-            return value{typename value::template in_place_index_t<json_type::string>{},*string};
+            return value{typename value::template in_place_index_t<json_type::string>{}, std::move(*string)};
         }
         if(auto boolean = consume_boolean(tokenizer); boolean){
             consume_whitespace(tokenizer);
-            return value{typename value::template in_place_index_t<json_type::boolean>{},*boolean};
+            return value{typename value::template in_place_index_t<json_type::boolean>{}, std::move(*boolean)};
         }
         if(auto null = consume_null(tokenizer); null){
             consume_whitespace(tokenizer);
@@ -451,8 +455,8 @@ private:
         if(auto number = consume_number(tokenizer); number){
             consume_whitespace(tokenizer);
             auto idx  = number->index();
-            if(idx == 0) return value{typename value::template in_place_index_t<json_type::integer>{},std::get<0>(*number)};
-            if(idx == 1) return value{typename value::template in_place_index_t<json_type::floating_point>{},std::get<1>(*number)};
+            if(idx == 0) return value{typename value::template in_place_index_t<json_type::integer>{}, std::move(std::get<0>(*number))};
+            if(idx == 1) return value{typename value::template in_place_index_t<json_type::floating_point>{}, std::move(std::get<1>(*number))};
         }
 
         throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
@@ -473,7 +477,7 @@ private:
         if(!element) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n"
                                                                                                          "Expected element value after \":\"");
 
-        return std::pair<std::string, basic_value<std::string, long long>>{*member_key, *element};
+        return std::pair<string, value>{std::move(*member_key), std::move(*element)};
     }
 
     template <typename inserter>
@@ -482,14 +486,14 @@ private:
         if(!member) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
                                              "Could not parse member");
 
-        (*ins).operator=(*member);
+        (*ins).operator=(std::move(*member));
         ++ins;
         while((tokenizer.peek_next() == ',')){
             tokenizer.consume_one();
             member = consume_member(tokenizer);
             if(!member) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
                                                  "Expected member after \",\"");
-            (*ins).operator=(*member);
+            (*ins).operator=(std::move(*member));
         }
     }
 
@@ -500,12 +504,12 @@ private:
         consume_whitespace(tokenizer);
         if(tokenizer.peek_next() == '}'){
             tokenizer.consume_one();
-            return object{};
+            return object{get_allocator()};
         }
 
-        object obj;
+        object obj{get_allocator()};
         consume_members(tokenizer, std::inserter(obj, obj.end()));
-        return obj;
+        return {std::move(obj)};
     }
 
     template <typename Iter>
@@ -514,14 +518,14 @@ private:
         if(!element) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
                                               "Could not parse member");
 
-        *ins = *element;
+        (*ins).operator=(std::move(*element));
         ++ins;
         while(tokenizer.peek_next() == ','){
             tokenizer.consume_one();
             element = consume_element(tokenizer);
             if(!element) throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
                                                         "Expected element after \",\"");
-            *ins = *element;
+            (*ins).operator=(std::move(*element));
         }
     }
 
@@ -530,16 +534,16 @@ private:
 
         tokenizer.consume_one();
         consume_whitespace(tokenizer);
-        if(tokenizer.peek_next() == ']') return array{};
+        if(tokenizer.peek_next() == ']') return array{get_allocator()};
 
-        array arr{};
+        array arr{get_allocator()};
 
         consume_elements(tokenizer, std::inserter(arr, arr.end()));
         if(tokenizer.peek_next() != ']'){
             throw std::runtime_error("Parsing json failed at: " + tokenizer.source_position() + ". \n" +
                                      "Expected end of array \"]\"");
         }
-        return arr;
+        return {std::move(arr)};
     }
 };
 
