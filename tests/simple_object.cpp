@@ -10,9 +10,10 @@ using parser = default_parser;
 TEST_CASE("Simple object with string property"){
     parser parser_;
     auto result = parser_.parse(R"({"property": "value"})");
+    REQUIRE(result);
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").get<parser::string>() == "value");
+    CHECK(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").get<parser::string>() == "value");
 }
 
 TEST_CASE("Simple object with 2 string properties"){
@@ -22,9 +23,11 @@ TEST_CASE("Simple object with 2 string properties"){
     "property2": "value2"
 })");
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").get<parser::string>() == "value");
-    CHECK(result.get<parser::object>().get_member("property2").get<parser::string>() == "value2");
+    REQUIRE(result.has_value());
+
+    CHECK(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").get<parser::string>() == "value");
+    CHECK(result->get<parser::object>().get_member("property2").get<parser::string>() == "value2");
 }
 
 TEST_CASE("Simple object with integer property"){
@@ -33,8 +36,10 @@ TEST_CASE("Simple object with integer property"){
     "property": 1234
 })");
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").get<parser::integer>() == 1234);
+    REQUIRE(result.has_value());
+
+    CHECK(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").get<parser::integer>() == 1234);
 }
 
 TEST_CASE("Simple object with floating property"){
@@ -43,8 +48,10 @@ TEST_CASE("Simple object with floating property"){
     "property": 1234.567
 })");
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK_THAT(result.get<parser::object>().get_member("property").get<parser::floating_point>(), Catch::Matchers::WithinRel(1234.567, 0.0001));
+    REQUIRE(result.has_value());
+
+    CHECK(result->index() == netformats::json::json_type::object);
+    CHECK_THAT(result->get<parser::object>().get_member("property").get<parser::floating_point>(), Catch::Matchers::WithinRel(1234.567, 0.0001));
 }
 
 TEST_CASE("Simple object with null property"){
@@ -53,8 +60,10 @@ TEST_CASE("Simple object with null property"){
     "property": null
 })");
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").get<parser::null>() == parser::null{});
+    REQUIRE(result);
+
+    CHECK(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").get<parser::null>() == parser::null{});
 }
 
 TEST_CASE("Simple object with true property"){
@@ -63,8 +72,10 @@ TEST_CASE("Simple object with true property"){
     "property": true
 })");
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").get<parser::boolean>() == true);
+    REQUIRE(result);
+
+    CHECK(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").get<parser::boolean>() == true);
 }
 
 TEST_CASE("Simple object with false property"){
@@ -73,8 +84,10 @@ TEST_CASE("Simple object with false property"){
     "property": false
 })");
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").get<parser::boolean>() == false);
+    REQUIRE(result);
+
+    CHECK(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").get<parser::boolean>() == false);
 }
 
 TEST_CASE("Simple object with nested object with property"){
@@ -85,6 +98,8 @@ TEST_CASE("Simple object with nested object with property"){
     }
 })");
 
-    CHECK(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").get<parser::object>().get_member("nestedProperty").get<parser::null>() == parser::null{});
+    REQUIRE(result.has_value());
+
+    CHECK((*result).index() == netformats::json::json_type::object);
+    CHECK((*result).get<parser::object>().get_member("property").get<parser::object>().get_member("nestedProperty").get<parser::null>() == parser::null{});
 }

@@ -13,9 +13,9 @@
 #include <ranges>
 #include <concepts>
 #include <cassert>
-#include <netformats/storage_defs.hpp>
-#include <netformats/basic_value.hpp>
-#include <netformats/type_traits.hpp>
+#include "storage_defs.hpp"
+#include "basic_value.hpp"
+#include "netformats/type_traits.hpp"
 
 
 namespace netformats::json {

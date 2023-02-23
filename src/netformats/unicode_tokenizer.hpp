@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include <netformats/text_position.hpp>
+#include <netformats/expected.hpp>
+
 #include <bitset>
 #include <cstdint>
 #include <stdexcept>
@@ -13,16 +16,21 @@
 #include <algorithm>
 #include <limits>
 
-namespace unicode {
+namespace netformats::unicode {
 
-    constexpr unsigned to_character_size(char firstByte) {
+    enum class unicode_error{
+        invalid_utf_encoding,
+        codepoint_out_of_range
+    };
+
+    constexpr expected<unsigned, unicode_error> to_character_size(char firstByte) {
         const std::bitset<8> value{static_cast<uint8_t>(firstByte)};
         if (value[7] == 0) return 1;
-        else if (value[6] == 0) [[unlikely]] throw std::invalid_argument("invalid UTF-8 character");
+        else if (value[6] == 0) [[unlikely]] return unexpected{unicode_error::invalid_utf_encoding};
         else if (value[5] == 0) return 2;
         else if (value[4] == 0) return 3;
         else if (value[3] == 0) return 4;
-        else [[unlikely]] throw std::invalid_argument("invalid UTF-8 character");
+        else [[unlikely]] return unexpected(unicode_error::invalid_utf_encoding);
     }
 
     constexpr bool starts_with_10(std::byte byte) {
@@ -30,7 +38,7 @@ namespace unicode {
         return byte == std::byte{0b10000000};
     };
 
-    constexpr unsigned to_character_size(char32_t unicodeChar) {
+    constexpr expected<unsigned, unicode_error> to_character_size(char32_t unicodeChar) {
 
         constexpr unsigned mask = 0xFF000000;
         for (unsigned int i = 0; i < 4; ++i, unicodeChar <<= 8) {
@@ -52,7 +60,7 @@ namespace unicode {
     }
 
     //todo use high performance algorithms for encoding and decoding
-    constexpr char32_t codepoint_to_character(char32_t codepoint){
+    constexpr expected<char32_t, unicode_error> codepoint_to_character(char32_t codepoint){
 
         uint32_t result{};
         if(codepoint <= 0x7F) return codepoint;
@@ -95,32 +103,30 @@ namespace unicode {
             return result;
         }
 
-        [[unlikely]] throw std::invalid_argument("invalid codepoint");
+        [[unlikely]] return unexpected{unicode_error::codepoint_out_of_range};
     }
 
     //todo handle CRLF
     class tokenizer {
     public:
-        constexpr explicit tokenizer(std::string_view input) : buffer(input) {
-            if (input.empty()) {
-                throw std::invalid_argument("Empty input. Cannot tokenize input");
-            }
-        }
+
+        //todo test empty input
+        constexpr explicit tokenizer(std::string_view input) : buffer(input) {}
 
         [[nodiscard]] constexpr std::optional<char32_t> character() {
             if (buffer[current.idx] == '\0') [[unlikely]] return {};
             return current.parsed_character;
         }
 
-        [[nodiscard]] std::string source_position() const {
-            return std::to_string(current.line_number) + ":" + std::to_string(current.col_number);
+        [[nodiscard]] text_position source_position() const {
+            return {.line = current.line_number, .column = current.col_number};
         }
 
         [[nodiscard]] std::string next_source_position() const {
             return std::to_string(next->line_number) + ":" + std::to_string(next->col_number);
         }
 
-        constexpr std::optional<char32_t> peek_next() {
+        [[nodiscard]] constexpr expected<std::optional<char32_t>, unicode_error> peek_next() {
             auto eof_to_nullopt = [](char32_t character) -> std::optional<char32_t> {
                 if (character == '\0') return std::nullopt;
                 return character;
@@ -128,8 +134,13 @@ namespace unicode {
 
             if (next) return eof_to_nullopt(next->parsed_character);
 
-            std::optional<std::pair<unsigned, char32_t>> character = read_character(
+            expected<std::optional<std::pair<unsigned, char32_t>>, unicode_error> expectedCharacter = read_character(
                     current.idx + current.parsed_character_size);
+            if(!expectedCharacter){
+                return unexpected{std::move(expectedCharacter).error()};
+            }
+
+            auto& character = *expectedCharacter;
             if (!character) return{};
 
             unsigned long next_line_number = current.line_number;
@@ -151,26 +162,31 @@ namespace unicode {
             return eof_to_nullopt(next->parsed_character);
         }
 
-        char const *current_iterator() {
+        [[nodiscard]] char const *current_iterator() const {
             return buffer.data() + current.idx;
         }
 
-        constexpr void consume_one() {
-            if (buffer[current.idx] == '\0') return;
+        [[nodiscard]] constexpr expected_no_value<unicode_error> consume_one() {
+            if (buffer[current.idx] == '\0') return {};
 
             if (next) {
                 current = *next;
                 next = {};
-                return;
+                return {};
             }
 
             current.idx = current.idx + current.parsed_character_size;
-            std::optional<std::pair<unsigned, char32_t>> newCharacter = read_character(current.idx);
-            if (!newCharacter) [[unlikely]] {
+            expected expectedNewCharacter = read_character(current.idx);
+            if(!expectedNewCharacter){
+                return unexpected{std::move(expectedNewCharacter).error()};
+            }
+            if (!expectedNewCharacter) [[unlikely]] {
                 current.parsed_character = '\0';
                 current.parsed_character_size = 1;
-                return;
+                return {};
             }
+
+            auto& newCharacter = *expectedNewCharacter;
             current.parsed_character_size = newCharacter->first;
             current.parsed_character = newCharacter->second;
 
@@ -180,8 +196,13 @@ namespace unicode {
             } else {
                 current.col_number++;
             }
+
+            return {};
         }
 
+        [[nodiscard]] constexpr std::string_view source_buffer() const {
+            return buffer;
+        }
 
     private:
         struct position {
@@ -194,26 +215,31 @@ namespace unicode {
         position current;
         std::optional<position> next;
 
-        [[nodiscard]] constexpr std::optional<std::pair<unsigned, char32_t>> read_character(std::size_t idx) {
-            if(idx >= buffer.size()){
+        [[nodiscard]] constexpr expected<std::optional<std::pair<unsigned, char32_t>>, unicode_error> read_character(std::size_t idx) {
+            if(idx >= buffer.size()) [[unlikely]] {
                 return {};
             }
 
             std::pair<unsigned, char32_t> result;
-            result.first = unicode::to_character_size(buffer[idx]);
-            auto &size = result.first;
-            if(!(size > 0 && size < 4)){
-                throw std::runtime_error("Invalid unicode character at " + source_position());
+            expected expectedSize = unicode::to_character_size(buffer[idx]);
+            if(!expectedSize){
+                return unexpected{expectedSize.error()};
             }
-            if (idx + size > buffer.size()) throw std::runtime_error("Invalid unicode character at " + source_position());
-            if (size > 1 && std::any_of(buffer.data() + idx + 1, buffer.data() + idx + size,
-                            [](auto element) { return !unicode::starts_with_10(static_cast<std::byte>(element)); })) {
-                throw std::runtime_error("Invalid unicode character at " + source_position());
+            assert(*expectedSize > 0);
+            result.first = *expectedSize;
+
+            if (idx + *expectedSize > buffer.size()){
+                return unexpected{unicode_error::invalid_utf_encoding};
             }
-            const char32_t max_character = codepoint_to_character(0x10FFFF);
+            if (*expectedSize > 1 && std::any_of(buffer.data() + idx + 1, buffer.data() + idx + *expectedSize,
+                            [](auto element) { return !unicode::starts_with_10(static_cast<std::byte>(element)); })) [[unlikely]] {
+                return unexpected{unicode_error::invalid_utf_encoding};
+            }
+
+            constexpr char32_t max_character = *codepoint_to_character(0x10FFFF);
             static_assert(max_character == 0xf48fbfbf);
 
-            result.second = unicode::as_character(buffer.data() + idx, size);
+            result.second = unicode::as_character(buffer.data() + idx, *expectedSize);
 
             if (result.second < 0x0020 || result.second > max_character) {
                 if (result.second == '\0') return {};
@@ -224,7 +250,7 @@ namespace unicode {
                     case '\t':
                     return result;
                 }
-                throw std::runtime_error("Invalid unicode character at position: " + source_position());
+                return unexpected{unicode_error::codepoint_out_of_range};
             }
 
             return result;

@@ -87,6 +87,7 @@ TEST_CASE("Custom allocator"){
 
     parser p;
     auto result = p.parse(json_string);
+    REQUIRE(result);
 
 
     // dynamically allocated for array when allocations occur in order 1, 2, 4,
@@ -103,7 +104,7 @@ TEST_CASE("Custom allocator"){
         CAPTURE(std::pair{demangle(key.name()), value});
     }
 
-    auto root = result.get_if<parser::object>();
+    auto root = result->get_if<parser::object>();
     REQUIRE(root != nullptr);
 
     REQUIRE(root->has_member_of_type<parser::string>("property"));

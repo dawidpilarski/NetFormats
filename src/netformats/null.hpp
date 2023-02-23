@@ -7,7 +7,7 @@
 
 #include <optional>
 
-namespace netformats::json{
+namespace netformats{
 
 class null_t{
 public:

@@ -7,7 +7,7 @@
 
 #include <netformats/null.hpp>
 #include <netformats/type_traits.hpp>
-#include <netformats/storage_defs.hpp>
+#include "storage_defs.hpp"
 
 #include <string>
 #include <scoped_allocator>
