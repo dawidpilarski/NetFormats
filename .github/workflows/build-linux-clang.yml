@@ -27,17 +27,13 @@ jobs:
     - name: Install Conan
       run: |
         pip3 install conan 
-        conan profile new --detect default
-        conan profile update settings.compiler=clang default
-        conan profile update settings.compiler.version=15 default
-        conan profile update settings.compiler.libcxx=libstdc++11 default
 
     - name: Create build directory
       run: mkdir ${{github.workspace}}/build
       
     - name: Install dependencies
       working-directory: ${{github.workspace}}/build
-      run: CC="clang-15" CXX="clang++-15" conan install ../ --build=missing
+      run: CC="clang-15" CXX="clang++-15" conan install ../ --build=missing --profile=${{github.workspace}}/.github/workflows/conan-profiles/linux-clang --profile:build=${{github.workspace}}/.github/workflows/conan-profiles/linux-clang
     
     - name: Configure CMake
       working-directory: ${{github.workspace}}/build

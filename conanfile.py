@@ -1,4 +1,7 @@
-from conans import ConanFile, CMake
+from conan import ConanFile
+from conan.tools.files import copy
+from conan.tools.cmake import CMakeDeps
+
 
 class NetFormatsConan(ConanFile):
     name = "NetFormats"
@@ -7,7 +10,7 @@ class NetFormatsConan(ConanFile):
     exports_sources = "src/*", "CMakeLists.txt"
     no_copy_source = True
     tool_requires = ['catch2/3.3.0', 'benchmark/1.7.1']
-    generators=['cmake']
+    generators=['CMakeDeps']
 
     def build(self):
         cmake = CMake(self)
