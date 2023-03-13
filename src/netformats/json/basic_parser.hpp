@@ -58,10 +58,10 @@ public:
     using value = basic_value<config>;
     using object = typename value::object;
     using array = typename value::array;
-    using parse_error = parse_error<string>;
+    using error = parse_error<string>;
 private:
     template <typename T>
-    using expected = expected<T, parse_error>;
+    using expected = expected<T, error>;
     using expected_no_value = expected<null>;
 public:
 
@@ -82,8 +82,8 @@ private:
     allocator<null> root_allocator;
 
 
-    constexpr static inline parse_error create_parse_error(unicode::tokenizer &tokenizer, parse_error_reason reason){
-        parse_error error;
+    constexpr static inline error create_parse_error(unicode::tokenizer &tokenizer, parse_error_reason reason){
+        error error;
         error.position = tokenizer.source_position();
         error.reason = reason;
         error.buffer = tokenizer.source_buffer();
@@ -92,8 +92,8 @@ private:
         return error;
     }
 
-    constexpr static inline parse_error create_parse_error(unicode::tokenizer &tokenizer, unicode::unicode_error reason){
-        parse_error error;
+    constexpr static inline error create_parse_error(unicode::tokenizer &tokenizer, unicode::unicode_error reason){
+        error error;
         error.position = tokenizer.source_position();
         error.reason = parse_error_from_unicode_error(reason);
         error.buffer = tokenizer.source_buffer();
@@ -103,7 +103,7 @@ private:
     }
 
     template <typename T>
-    unexpected<parse_error> forward_error(expected<T>&& error){
+    unexpected<error> forward_error(expected<T>&& error){
         return unexpected{std::move(error.error())};
     }
 
