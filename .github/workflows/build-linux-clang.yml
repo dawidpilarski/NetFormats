@@ -32,16 +32,11 @@ jobs:
       run: mkdir ${{github.workspace}}/build
       
     - name: Install dependencies
-      working-directory: ${{github.workspace}}/build
-      run: CC="clang-15" CXX="clang++-15" conan install ../ --build=missing --profile=${{github.workspace}}/.github/workflows/conan-profiles/linux-clang --profile:build=${{github.workspace}}/.github/workflows/conan-profiles/linux-clang
+      run: CC="clang-15" CXX="clang++-15" conan install ./ --output-folder=${{github.workspace}}/build --build=missing --profile=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc --profile:build=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc
     
     - name: Configure CMake
       working-directory: ${{github.workspace}}/build
-      run: CC="clang-15" CXX="clang++-15" cmake CMAKE_CXX_COMPILER="clang++-15" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNF_BUILD_TESTS=ON ../
-
-    - name: Build
-      working-directory: ${{github.workspace}}/build
-      run: CC="clang-15" CXX="clang++-15" cmake --build .
+      run: CC="clang-15" CXX="clang++-15" conan build ../ --profile=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc --profile:build=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc
 
     - name: Test
       working-directory: ${{github.workspace}}/build
