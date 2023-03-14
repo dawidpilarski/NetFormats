@@ -8,8 +8,7 @@ project(tests)
 include(CTest)
 enable_testing()
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+find_package(Catch2 REQUIRED)
 
 include(Catch)
 
@@ -22,9 +21,10 @@ add_executable(${PROJECT_NAME}
         whitespaces.cpp
         numbers.cpp
         strings.cpp
+        custom_allocator.cpp
         test_defs.hpp
-        custom_allocator.cpp)
+        )
 target_compile_options(${PROJECT_NAME} PUBLIC "-ftemplate-backtrace-limit=0")
-target_link_libraries(${PROJECT_NAME} PUBLIC NFlib Catch2Main Catch2 )
+target_link_libraries(${PROJECT_NAME} PUBLIC NFlib Catch2::Catch2WithMain)
 catch_discover_tests(${PROJECT_NAME})
 add_test(NAME unit_tests COMMAND ${PROJECT_NAME})

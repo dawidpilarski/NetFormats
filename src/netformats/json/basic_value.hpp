@@ -15,7 +15,7 @@
 #include <optional>
 #include <type_traits>
 
-#include <netformats/storage_defs.hpp>
+#include "storage_defs.hpp"
 #include <netformats/null.hpp>
 #include <netformats/type_traits.hpp>
 
@@ -38,6 +38,7 @@ enum class json_type : std::size_t {
     object
 };
 
+//todo allocator awareness
 constexpr std::string to_string(json_type type){
     switch (type) {
         case json_type::null:
@@ -64,6 +65,12 @@ namespace details{
     class idx_to_type;
 }
 
+
+// todo any of the types should not be one of
+// in_place_t
+// in_place_index_t
+// in_place_type_t
+// to avoid strange behaviors with methods
 template <netformats::details::json_config config>
 class basic_value{
 public:

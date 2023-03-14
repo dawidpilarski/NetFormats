@@ -27,28 +27,18 @@ jobs:
     - name: Install Conan
       run: |
         pip3 install conan 
-        conan profile new --detect default
-        conan profile update settings.compiler=clang default
-        conan profile update settings.compiler.version=15 default
-        conan profile update settings.compiler.libcxx=libstdc++11 default
 
     - name: Create build directory
       run: mkdir ${{github.workspace}}/build
       
     - name: Install dependencies
-      working-directory: ${{github.workspace}}/build
-      run: CC="clang-15" CXX="clang++-15" conan install ../ --build=missing
+      run: CC="clang-15" CXX="clang++-15" conan install ./ --output-folder=${{github.workspace}}/build --build=missing --profile=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc --profile:build=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc
     
     - name: Configure CMake
       working-directory: ${{github.workspace}}/build
-      run: CC="clang-15" CXX="clang++-15" cmake CMAKE_CXX_COMPILER="clang++-15" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNF_BUILD_TESTS=ON ../
-
-    - name: Build
-      working-directory: ${{github.workspace}}/build
-      run: CC="clang-15" CXX="clang++-15" cmake --build .
+      run: CC="clang-15" CXX="clang++-15" conan build ../ --profile=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc --profile:build=${{github.workspace}}/.github/workflows/conan-profiles/linux-gcc
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure --test-dir tests

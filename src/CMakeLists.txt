@@ -12,10 +12,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_library(${PROJECT_NAME} INTERFACE)
-target_sources(${PROJECT_NAME} INTERFACE netformats/unicode_tokenizer.hpp
-        netformats/storage_defs.hpp
-        netformats/basic_object.hpp
-        netformats/basic_array.hpp
-        netformats/basic_value.hpp
-        netformats/basic_parser.hpp)
+target_sources(${PROJECT_NAME} INTERFACE
+        netformats/type_traits.hpp
+        netformats/expected.hpp
+        netformats/text_position.hpp
+        netformats/unicode_tokenizer.hpp
+        netformats/json/parse_error.hpp
+        netformats/json/storage_defs.hpp
+        netformats/json/basic_object.hpp
+        netformats/json/basic_array.hpp
+        netformats/json/basic_value.hpp
+        netformats/json/basic_parser.hpp)
 target_include_directories(${PROJECT_NAME} INTERFACE .)

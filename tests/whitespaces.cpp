@@ -26,92 +26,114 @@ TEST_CASE("Single element with whitespaces before"){
     parser parser_;
     auto result = parser_.parse(whitespaces + "null");
 
-    CHECK(result.index() == netformats::json::json_type::null);
+    REQUIRE(result);
+    CHECK(result->index() == netformats::json::json_type::null);
 }
 
 TEST_CASE("Single element with whitespaces after"){
     parser parser_;
     auto result = parser_.parse("null" + whitespaces);
+    REQUIRE(result);
 
-    CHECK(result.index() == netformats::json::json_type::null);
+    CHECK(result->index() == netformats::json::json_type::null);
 }
 
 TEST_CASE("Single element with whitespaces before and after"){
     parser parser_;
     auto result = parser_.parse(whitespaces + "null" + whitespaces);
 
-    CHECK(result.index() == netformats::json::json_type::null);
+    REQUIRE(result.has_value());
+
+    CHECK(result->index() == netformats::json::json_type::null);
 }
 
 TEST_CASE("Single element with no whitespaces"){
     parser parser_;
     auto result = parser_.parse( "null");
 
-    CHECK(result.index() == netformats::json::json_type::null);
+    REQUIRE(result);
+
+    CHECK(result->index() == netformats::json::json_type::null);
 }
 
 TEST_CASE("Empty object with whitespaces"){
     parser parser_;
     auto result = parser_.parse("{" + whitespaces + "}");
 
-    REQUIRE(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().empty());
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().empty());
 }
 
 TEST_CASE("Empty object with no whitespaces"){
     parser parser_;
     auto result = parser_.parse("{" "}");
 
-    REQUIRE(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().empty());
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().empty());
 }
 
 TEST_CASE("Empty array with whitespaces"){
     parser parser_;
     auto result = parser_.parse("[" + whitespaces + "]");
 
-    REQUIRE(result.index() == netformats::json::json_type::array);
-    CHECK(result.get<parser::array>().empty());
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::array);
+    CHECK(result->get<parser::array>().empty());
 }
 
 TEST_CASE("Empty array with no whitespaces"){
     parser parser_;
     auto result = parser_.parse("["  "]");
 
-    REQUIRE(result.index() == netformats::json::json_type::array);
-    CHECK(result.get<parser::array>().empty());
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::array);
+    CHECK(result->get<parser::array>().empty());
 }
 
 TEST_CASE("Object with whitespaces before and after key"){
     parser parser_;
     auto result = parser_.parse("{" + whitespaces + "\"property\"" + whitespaces + ": null}");
 
-    REQUIRE(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
 }
 
 TEST_CASE("Object with no whitespaces before and after key"){
     parser parser_;
     auto result = parser_.parse("{" "\"property\""  ": null}");
 
-    REQUIRE(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
 }
 
 TEST_CASE("Object with whitespaces before key"){
     parser parser_;
     auto result = parser_.parse("{" + whitespaces + "\"property\"" ": null}");
 
-    REQUIRE(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
 }
 
 TEST_CASE("Object with whitespaces after key"){
     parser parser_;
     auto result = parser_.parse("{" "\"property\"" + whitespaces + ": null}");
 
-    REQUIRE(result.index() == netformats::json::json_type::object);
-    CHECK(result.get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
+    REQUIRE(result);
+
+    REQUIRE(result->index() == netformats::json::json_type::object);
+    CHECK(result->get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
 }
 
 // Todo: test for whitespace before ',' after member

@@ -10,11 +10,12 @@ using parser = default_parser;
 TEST_CASE("Simple array of integers"){
     parser parser_;
     auto val = parser_.parse("[1, 2, 3]");
+    REQUIRE(val.has_value());
 
-    REQUIRE(!val.holds_alternative<parser::object>());
-    REQUIRE(val.holds_alternative<parser::array>());
+    REQUIRE(!val->holds_alternative<parser::object>());
+    REQUIRE(val->holds_alternative<parser::array>());
 
-    parser::array arr= val.get<parser::array>();
+    parser::array arr= val->get<parser::array>();
     for(const auto& val : arr){
         CHECK(to_string(val.index()) == "integer");
     }
@@ -26,13 +27,15 @@ TEST_CASE("Simple array of integers"){
 TEST_CASE("Simple array of strings"){
     parser parser_;
     auto val = parser_.parse(R"(["1", "2", "3"])");
+    REQUIRE(val);
 
-    REQUIRE(!val.holds_alternative<parser::object>());
-    REQUIRE(val.holds_alternative<parser::array>());
+    REQUIRE(!val->holds_alternative<parser::object>());
+    REQUIRE(val->holds_alternative<parser::array>());
 
-    parser::array arr= val.get<parser::array>();
+    parser::array arr= val->get<parser::array>();
     for(const auto& val : arr){
         CHECK(to_string(val.index()) == "string");
+        CHECK(val.index() == netformats::json::json_type::string);
     }
     CHECK(arr[0].get<parser::string>() == "1");
     CHECK(arr[1].get<parser::string>() == "2");
@@ -43,10 +46,12 @@ TEST_CASE("Simple array of floating point"){
     parser parser_;
     auto val = parser_.parse(R"([1.01, 2.02, 3.03])");
 
-    REQUIRE(!val.holds_alternative<parser::object>());
-    REQUIRE(val.holds_alternative<parser::array>());
+    REQUIRE(val);
 
-    parser::array arr= val.get<parser::array>();
+    REQUIRE(!val->holds_alternative<parser::object>());
+    REQUIRE(val->holds_alternative<parser::array>());
+
+    parser::array arr= val->get<parser::array>();
     for(const auto& val : arr){
         REQUIRE(to_string(val.index()) == "floating point");
     }
@@ -60,10 +65,10 @@ TEST_CASE("Simple array of objects"){
     parser parser_;
     auto val = parser_.parse(R"([{}, {}, {}])");
 
-    REQUIRE(!val.holds_alternative<parser::object>());
-    REQUIRE(val.holds_alternative<parser::array>());
+    REQUIRE(!val->holds_alternative<parser::object>());
+    REQUIRE(val->holds_alternative<parser::array>());
 
-    parser::array arr= val.get<parser::array>();
+    parser::array arr= val->get<parser::array>();
     for(const auto& val : arr){
         CHECK(to_string(val.index()) == "object");
         CHECK(val.get<parser::object>() == parser::object{});
@@ -74,10 +79,16 @@ TEST_CASE("Simple array of arrays"){
     parser parser_;
     auto val = parser_.parse(R"([[], [], []]])");
 
-    REQUIRE(!val.holds_alternative<parser::object>());
-    REQUIRE(val.holds_alternative<parser::array>());
+    if(val){
 
-    parser::array arr= val.get<parser::array>();
+    } else {
+        REQUIRE(false);
+    }
+
+    REQUIRE(!val->holds_alternative<parser::object>());
+    REQUIRE(val->holds_alternative<parser::array>());
+
+    parser::array arr= val->get<parser::array>();
     for(const auto& val : arr){
         CHECK(to_string(val.index()) == "array");
         CHECK(val.get<parser::array>() == parser::array{});
@@ -88,10 +99,12 @@ TEST_CASE("Simple array of trues"){
     parser parser_;
     auto val = parser_.parse(R"([true, true, true]])");
 
-    REQUIRE(!val.holds_alternative<parser::object>());
-    REQUIRE(val.holds_alternative<parser::array>());
+    REQUIRE(val);
 
-    parser::array arr= val.get<parser::array>();
+    REQUIRE(!val->holds_alternative<parser::object>());
+    REQUIRE(val->holds_alternative<parser::array>());
+
+    parser::array arr= val->get<parser::array>();
     for(const auto& val : arr){
         CHECK(to_string(val.index()) == "boolean");
         CHECK(val.get<parser::boolean>() == true);
@@ -102,10 +115,12 @@ TEST_CASE("Simple array of falses"){
     parser parser_;
     auto val = parser_.parse(R"([false, false, false]])");
 
-    REQUIRE(!val.holds_alternative<parser::object>());
-    REQUIRE(val.holds_alternative<parser::array>());
+    REQUIRE(val.has_value());
 
-    parser::array arr= val.get<parser::array>();
+    REQUIRE(!val->holds_alternative<parser::object>());
+    REQUIRE(val->holds_alternative<parser::array>());
+
+    parser::array arr= val->get<parser::array>();
     for(const auto& val : arr){
         CHECK(to_string(val.index()) == "boolean");
         CHECK(val.get<parser::boolean>() == false);

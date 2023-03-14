@@ -1,4 +1,7 @@
-from conans import ConanFile, CMake
+from conan import ConanFile
+from conan.tools.files import copy
+from conan.tools.cmake import CMakeDeps, CMake, CMakeToolchain
+
 
 class NetFormatsConan(ConanFile):
     name = "NetFormats"
@@ -6,15 +9,18 @@ class NetFormatsConan(ConanFile):
     settings = "os", "compiler", "arch", "build_type"
     exports_sources = "src/*", "CMakeLists.txt"
     no_copy_source = True
-    tool_requires = ['catch2/3.3.0', 'benchmark/1.7.1']
-    generators=['cmake']
+    test_requires = ['catch2/3.3.0']
+    generators=['CMakeDeps']
+
+    def generate(self):
+        tc = CMakeToolchain(self)
+        tc.variables["NF_BUILD_TESTS"] = True
+        tc.generate()
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions['NF_BUILD_TESTS=ON']
         cmake.configure()
         cmake.build()
-        cmake.test()
 
     def package(self):
         self.copy("*.hpp")
