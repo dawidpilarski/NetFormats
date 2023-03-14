@@ -38,6 +38,7 @@ enum class json_type : std::size_t {
     object
 };
 
+//todo allocator awareness
 constexpr std::string to_string(json_type type){
     switch (type) {
         case json_type::null:

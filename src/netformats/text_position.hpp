@@ -10,6 +10,8 @@ struct text_position{
     std::size_t column;
 };
 
-[[nodiscard]] inline std::string to_string(text_position pos){
+//todo allocator
+template <typename string>
+[[nodiscard]] inline string to_string(text_position pos){
     return std::to_string(pos.column) + ":" + std::to_string(pos.line);
 }

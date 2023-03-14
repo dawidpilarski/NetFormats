@@ -162,7 +162,7 @@ namespace netformats::json{
     }
 
 
-    template <typename string>
+    template <typename string = std::string>
     string to_string(const parse_error<string>& err){
         string str;
         //todo handle allocator correctly
