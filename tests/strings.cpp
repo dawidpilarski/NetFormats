@@ -64,7 +64,7 @@ TEST_CASE("String with escaped hex character"){
     REQUIRE(result.has_value());
 
     CHECK((*result).index() == netformats::json::json_type::string);
-    CHECK((*result).get<netformats::json::json_type::string>() == "\x12\x34");
+    CHECK((*result).get<netformats::json::json_type::string>() == "\U00001234");
 }
 
 TEST_CASE("String with another escaped hex character"){
@@ -73,7 +73,7 @@ TEST_CASE("String with another escaped hex character"){
     REQUIRE(result.has_value());
 
     CHECK((*result).index() == netformats::json::json_type::string);
-    CHECK((*result).get<netformats::json::json_type::string>() == "\x19");
+    CHECK((*result).get<netformats::json::json_type::string>() == "\U00000019");
 }
 
 TEST_CASE("String Zażółć gęślą jaźń"){
@@ -114,10 +114,106 @@ TEST_CASE("String 世丕且且世两上与丑万丣丕且丗丕"){
     CHECK((*result).get<netformats::json::json_type::string>() == "世丕且且世两上与丑万丣丕且丗丕");
 }
 
+TEST_CASE("String hex with capital U"){
+    parser parser_;
+    std::string string = "\"\\U123\"";
+    auto result = parser_.parse(string);
+    REQUIRE(!result.has_value());
 
-//todo negative test hex with capital U
-//todo negative test hex of 3-0 characters
-//todo negative test hex of letters GHIJ in hex
-//todo negative test hex of letters GHIJ in hex
-//todo negative test character < 20
-//todo negative test character > 10ffff
+    auto error = result.error();
+
+    CHECK(error.reason == netformats::json::parse_error_reason::escaped_character_invalid);\
+    REQUIRE(error.buffer_iterator < error.buffer.end());
+    CHECK(*error.buffer_iterator == 'U');
+    CAPTURE(error.position.column);
+    CHECK(error.position == text_position{1,3});
+}
+
+TEST_CASE("String hex with not enough hex numbers"){
+    parser parser_;
+    std::string string = "\"\\uabc\"";
+    auto result = parser_.parse(string);
+    REQUIRE(!result.has_value());
+
+    auto error = result.error();
+
+    CHECK(error.reason == netformats::json::parse_error_reason::hex_invalid);
+    REQUIRE(error.buffer_iterator < error.buffer.end());
+    CHECK(*error.buffer_iterator == '\"');
+    CAPTURE(error.position.column);
+    CHECK(error.position == text_position{1,7});
+}
+
+TEST_CASE("String hex with 0 hex numbers"){
+    parser parser_;
+    std::string string = "\"\\u\"";
+    auto result = parser_.parse(string);
+    REQUIRE(!result.has_value());
+
+    auto error = result.error();
+
+    CHECK(error.reason == netformats::json::parse_error_reason::hex_invalid);
+    REQUIRE(error.buffer_iterator < error.buffer.end());
+    CHECK(*error.buffer_iterator == '\"');
+    CAPTURE(error.position.column);
+    CHECK(error.position == text_position{1,4});
+}
+
+TEST_CASE("String hex with letter g"){
+    parser parser_;
+    std::string string = "\"\\ufffg\"";
+    auto result = parser_.parse(string);
+    REQUIRE(!result.has_value());
+
+    auto error = result.error();
+
+    CHECK(error.reason == netformats::json::parse_error_reason::hex_invalid);
+    REQUIRE(error.buffer_iterator < error.buffer.end());
+    CHECK(*error.buffer_iterator == 'g');
+    CAPTURE(error.position.column);
+    CHECK(error.position == text_position{1,7});
+}
+
+TEST_CASE("String with character int(19)"){
+    parser parser_;
+    std::string string = {'\"', 'a', 'b', 'c', char{19}, '\"'};
+    auto result = parser_.parse(string);
+    REQUIRE(!result.has_value());
+
+    auto error = result.error();
+
+    CHECK(error.reason == netformats::json::parse_error_reason::utf_8_codepoint_out_of_range);
+    REQUIRE(error.buffer_iterator < error.buffer.end());
+    CHECK(*error.buffer_iterator == char{19});
+    CAPTURE(error.position.column);
+    CHECK(error.position == text_position{1,4});
+}
+
+TEST_CASE("String without closing quote"){
+    parser parser_;
+    std::string string = {'\"', 'a', 'b', 'c', 'd'};
+    auto result = parser_.parse(string);
+    REQUIRE(!result.has_value());
+
+    auto error = result.error();
+
+    CHECK(error.reason == netformats::json::parse_error_reason::string_missing_finishing_quote);
+    REQUIRE(error.buffer_iterator == error.buffer.end());
+    CAPTURE(error.position.column);
+    CHECK(error.position == text_position{1,5});
+}
+
+TEST_CASE("String with badly encoded utf-8"){
+    parser parser_;
+    std::string string = {'\"', char(0b11001111), char(0xff), '\"'};
+    auto result = parser_.parse(string);
+    REQUIRE(!result.has_value());
+
+    auto error = result.error();
+
+    CHECK(error.reason == netformats::json::parse_error_reason::invalid_utf_8_encoding);
+    REQUIRE(error.buffer_iterator != error.buffer.end());
+    CHECK(*error.buffer_iterator == char(0b11001111));
+    CAPTURE(error.position.column);
+    CHECK(error.position == text_position{1,1});
+}

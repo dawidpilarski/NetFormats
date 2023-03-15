@@ -77,7 +77,7 @@ TEST_CASE("Simple array of objects"){
 
 TEST_CASE("Simple array of arrays"){
     parser parser_;
-    auto val = parser_.parse(R"([[], [], []]])");
+    auto val = parser_.parse(R"([[], [], []])");
 
     if(val){
 
@@ -97,7 +97,7 @@ TEST_CASE("Simple array of arrays"){
 
 TEST_CASE("Simple array of trues"){
     parser parser_;
-    auto val = parser_.parse(R"([true, true, true]])");
+    auto val = parser_.parse(R"([true, true, true])");
 
     REQUIRE(val);
 
@@ -113,7 +113,7 @@ TEST_CASE("Simple array of trues"){
 
 TEST_CASE("Simple array of falses"){
     parser parser_;
-    auto val = parser_.parse(R"([false, false, false]])");
+    auto val = parser_.parse(R"([false, false, false])");
 
     REQUIRE(val.has_value());
 
@@ -125,4 +125,42 @@ TEST_CASE("Simple array of falses"){
         CHECK(to_string(val.index()) == "boolean");
         CHECK(val.get<parser::boolean>() == false);
     }
+}
+
+TEST_CASE("Array with missing comma"){
+    parser parser_;
+    auto val = parser_.parse(R"([false false, false])");
+
+    REQUIRE_FALSE(val.has_value());
+
+    REQUIRE(val.error().buffer_iterator != val.error().buffer.end());
+    CHECK(*val.error().buffer_iterator == 'f');
+    CHECK(val.error().position == text_position{1, 8});
+    CHECK(val.error().reason == netformats::json::parse_error_reason::expected_closing_bracket);
+
+}
+
+TEST_CASE("Array with missing closing bracket"){
+    parser parser_;
+    auto val = parser_.parse(R"([false, false, false)");
+
+    REQUIRE_FALSE(val.has_value());
+
+    REQUIRE(val.error().buffer_iterator == val.error().buffer.end());
+    CHECK(val.error().position == text_position{1, 20});
+    CHECK(val.error().reason == netformats::json::parse_error_reason::expected_closing_bracket);
+}
+
+TEST_CASE("Array with missing closing bracket and newline"){
+    parser parser_;
+    auto val = parser_.parse(R"([false, false
+ )");
+
+
+    REQUIRE_FALSE(val.has_value());
+
+    REQUIRE(val.error().buffer_iterator == val.error().buffer.end());
+    CAPTURE(val.error().position.column);
+    CHECK(val.error().position == text_position{2, 1});
+    CHECK(val.error().reason == netformats::json::parse_error_reason::expected_closing_bracket);
 }

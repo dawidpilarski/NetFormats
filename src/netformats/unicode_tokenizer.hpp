@@ -20,7 +20,8 @@ namespace netformats::unicode {
 
     enum class unicode_error{
         invalid_utf_encoding,
-        codepoint_out_of_range
+        codepoint_out_of_range,
+        end_of_input
     };
 
     constexpr expected<unsigned, unicode_error> to_character_size(char firstByte) {
@@ -127,12 +128,7 @@ namespace netformats::unicode {
         }
 
         [[nodiscard]] constexpr expected<std::optional<char32_t>, unicode_error> peek_next() {
-            auto eof_to_nullopt = [](char32_t character) -> std::optional<char32_t> {
-                if (character == '\0') return std::nullopt;
-                return character;
-            };
-
-            if (next) return eof_to_nullopt(next->parsed_character);
+            if (next) return next->parsed_character;
 
             expected<std::optional<std::pair<unsigned, char32_t>>, unicode_error> expectedCharacter = read_character(
                     current.idx + current.parsed_character_size);
@@ -141,12 +137,12 @@ namespace netformats::unicode {
             }
 
             auto& character = *expectedCharacter;
-            if (!character) return{};
+            if (!character) return std::nullopt;
 
             unsigned long next_line_number = current.line_number;
             unsigned long next_col_number = current.col_number;
             if (character->second == '\n') {
-                next_col_number = 1;
+                next_col_number = 0;
                 next_line_number++;
             } else {
                 next_col_number++;
@@ -159,7 +155,7 @@ namespace netformats::unicode {
                             character->first};
 
 
-            return eof_to_nullopt(next->parsed_character);
+            return next->parsed_character;
         }
 
         [[nodiscard]] char const *current_iterator() const {
@@ -167,7 +163,7 @@ namespace netformats::unicode {
         }
 
         [[nodiscard]] constexpr expected_no_value<unicode_error> consume_one() {
-            if (buffer[current.idx] == '\0') return {};
+            if(current.idx >= buffer.size())  return {};
 
             if (next) {
                 current = *next;
@@ -180,7 +176,7 @@ namespace netformats::unicode {
             if(!expectedNewCharacter){
                 return unexpected{std::move(expectedNewCharacter).error()};
             }
-            if (!expectedNewCharacter) [[unlikely]] {
+            if (!*expectedNewCharacter) [[unlikely]] {
                 current.parsed_character = '\0';
                 current.parsed_character_size = 1;
                 return {};
@@ -208,7 +204,7 @@ namespace netformats::unicode {
         struct position {
             std::size_t idx = 0;
             unsigned long line_number = 1;
-            unsigned long col_number = 1;
+            unsigned long col_number = 0;
             char32_t parsed_character = '\0';
             unsigned parsed_character_size = 0;
         };
@@ -217,7 +213,7 @@ namespace netformats::unicode {
 
         [[nodiscard]] constexpr expected<std::optional<std::pair<unsigned, char32_t>>, unicode_error> read_character(std::size_t idx) {
             if(idx >= buffer.size()) [[unlikely]] {
-                return {};
+                return std::nullopt;
             }
 
             std::pair<unsigned, char32_t> result;
@@ -242,7 +238,6 @@ namespace netformats::unicode {
             result.second = unicode::as_character(buffer.data() + idx, *expectedSize);
 
             if (result.second < 0x0020 || result.second > max_character) {
-                if (result.second == '\0') return {};
                 switch (result.second) {
                     case ' ':
                     case '\r':

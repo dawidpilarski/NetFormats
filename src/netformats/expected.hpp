@@ -386,7 +386,7 @@ static inline const no_value_t no_value{};
         enum class Discriminator{
             VALUE,
             ERROR
-        }discriminator;
+        } discriminator;
     };
 
     template <typename Error>
