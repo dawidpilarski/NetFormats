@@ -8,6 +8,8 @@
 struct text_position{
     std::size_t line;
     std::size_t column;
+
+    auto operator<=>(const text_position&) const = default;
 };
 
 //todo allocator

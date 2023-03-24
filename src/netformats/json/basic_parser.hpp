@@ -73,7 +73,17 @@ public:
 
     [[nodiscard]] expected<value> parse(std::string_view json){
         unicode::tokenizer tokenizer(json);
-        return consume_element(tokenizer);
+        expected<value> expected_element =  consume_element(tokenizer);
+
+        if(!expected_element) return expected_element;
+
+        auto expected_character = tokenizer.peek_next();
+        if(expected_character && expected_character->has_value()){
+            (void) tokenizer.consume_one();
+            return unexpected{create_parse_error(tokenizer, parse_error_reason::remaining_data_after_json_parse)};
+        }
+
+        return expected_element;
     }
 
     allocator<null> get_allocator(){return root_allocator;}
@@ -84,20 +94,23 @@ private:
 
     constexpr static inline error create_parse_error(unicode::tokenizer &tokenizer, parse_error_reason reason){
         error error;
+
         error.position = tokenizer.source_position();
         error.reason = reason;
         error.buffer = tokenizer.source_buffer();
-        error.buffer_offset = tokenizer.current_iterator() - error.buffer.data();
+        error.buffer_iterator = tokenizer.current_iterator();
+
 
         return error;
     }
 
     constexpr static inline error create_parse_error(unicode::tokenizer &tokenizer, unicode::unicode_error reason){
         error error;
+
         error.position = tokenizer.source_position();
         error.reason = parse_error_from_unicode_error(reason);
         error.buffer = tokenizer.source_buffer();
-        error.buffer_offset = tokenizer.current_iterator() - error.buffer.data();
+        error.buffer_iterator = tokenizer.current_iterator() + 1;
 
         return error;
     }
@@ -116,35 +129,18 @@ private:
             });
         };
 
-        auto expected_next_character = tokenizer.peek_next();
-        if(!expected_next_character){
-            return unexpected{create_parse_error(tokenizer, expected_next_character.error())};
-        }
-
-        auto& next_character = *expected_next_character;
-        if (!next_character) return {};
-
-        if (!is_whitespace(*next_character)) {
-            return{};
-        }
-
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
-
-        auto expected_next = tokenizer.peek_next();
-        if(!expected_next){
-            return unexpected{create_parse_error(tokenizer, expected_next.error())};
-        }
-
-        auto next = expected_next->value_or('A');
-        while (is_whitespace(next)) {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
+        while (true) {
+            auto expected_next_character = tokenizer.peek_next();
+            if(!expected_next_character){
+                return unexpected{create_parse_error(tokenizer, expected_next_character.error())};
             }
 
-            auto expected_next = tokenizer.peek_next();
-            next = expected_next->value_or('A');
+            auto& next_character = *expected_next_character;
+            if(!next_character) return {};
+
+            if(!is_whitespace(next_character.value_or('A'))) return {};
+            auto expected_no_error = tokenizer.consume_one();
+            assert(expected_no_error);
         }
 
         return {};
@@ -155,20 +151,19 @@ private:
     };
 
     [[nodiscard]] constexpr expected<sign> consume_sign(unicode::tokenizer &tokenizer) {
-        auto character = tokenizer.peek_next();
+        auto expected_character = tokenizer.peek_next();
+        if(!expected_character) return unexpected{create_parse_error(tokenizer, expected_character.error())};
+
+        auto& character = *expected_character;
         if (!character.has_value()) return sign::plus;
 
         if (*character == '+') {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void)tokenizer.consume_one();
             return sign::plus;
         }
 
         if (*character == '-') {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void)tokenizer.consume_one();
             return sign::minus;
         }
 
@@ -186,9 +181,7 @@ private:
         if (!character.has_value()) return {};
 
         if (*character >= '1' && *character <= '9') {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void)tokenizer.consume_one();
             return static_cast<char>(*character);
         }
 
@@ -206,9 +199,7 @@ private:
         if (!character.has_value()) return {};
 
         if (*character == '0') {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void)tokenizer.consume_one();
             return '0';
         }
 
@@ -257,10 +248,7 @@ private:
         if (*next_character == '-') {
             multiplier = -1;
             begin = tokenizer.current_iterator();
-            auto expected_no_error = tokenizer.consume_one();
-            if(!expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void)tokenizer.consume_one();
         }
 
         auto expected_zero = tokenizer.peek_next();
@@ -268,10 +256,7 @@ private:
             return unexpected{create_parse_error(tokenizer, expected_zero.error())};
         }
         if (*expected_zero == '0') {
-            auto expected_no_error = tokenizer.consume_one();
-            if(!expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void) tokenizer.consume_one();
 
             if (!begin) begin = tokenizer.current_iterator();
             if (auto expected_digit = consume_digit(tokenizer); *expected_digit && expected_digit->has_value()) {
@@ -312,10 +297,7 @@ private:
 
         if (*expected_dot != '.') return {};
 
-        auto expected_no_error = tokenizer.consume_one();
-        if(!expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
 
         const char *begin = tokenizer.current_iterator();
 
@@ -324,8 +306,10 @@ private:
             return forward_error(std::move(expected_digits));
         }
 
-        if (!*expected_digits)
+        if (!*expected_digits){
+            (void) tokenizer.consume_one();
             return unexpected{create_parse_error(tokenizer, parse_error_reason::fraction_no_digits_after_dot)};
+        }
 
         const auto &parsed_digits = **expected_digits;
 
@@ -343,9 +327,7 @@ private:
         if (!next) return {};
         if (*next != 'e' && *next != 'E') return {};
 
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
         const char *begin = tokenizer.current_iterator();
 
         if(auto expected_sign = consume_sign(tokenizer); !expected_sign){
@@ -358,8 +340,10 @@ private:
         }
 
         const auto& consumed_digits = *expected_digits;
-        if (!consumed_digits)
+        if (!consumed_digits){
+            (void)tokenizer.consume_one();
             return unexpected{create_parse_error(tokenizer, parse_error_reason::invalid_character_after_exponent)};
+        }
 
         return std::string_view{begin, consumed_digits->data() + consumed_digits->size()};
     }
@@ -407,9 +391,7 @@ private:
         if (!next_character) return {};
         if ((*next_character >= 'A' && *next_character <= 'F') ||
             *next_character >= 'a' && *next_character <= 'f') {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void)tokenizer.consume_one();
             return static_cast<char>(*next_character);
         }
 
@@ -446,9 +428,7 @@ private:
         if (std::any_of(escaped_characters.begin(), escaped_characters.end(), [&next_character](char character) {
             return *next_character == character;
         })) {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void) tokenizer.consume_one();
             switch (*next_character) {
                 case 'b': return '\b';
                 case 'f': return '\f';
@@ -463,9 +443,8 @@ private:
             return {};
         }
 
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
+
         auto first_hex_iter = tokenizer.current_iterator();
         std::array<std::optional<char>, 4> four_hexes = {0};
 
@@ -493,14 +472,19 @@ private:
         if (std::any_of(std::begin(four_hexes), std::end(four_hexes), [](const auto &element) {
             return !element.has_value();
         })) {
-            return unexpected{create_parse_error(tokenizer, parse_error_reason::hex_out_of_range)};
+            (void) tokenizer.consume_one();
+            return unexpected{create_parse_error(tokenizer, parse_error_reason::hex_invalid)};
         }
 
         ++first_hex_iter;
 
         uint32_t character_from_hex;
         std::from_chars(first_hex_iter, tokenizer.current_iterator() + 1, character_from_hex, 16);
-        return std::bit_cast<char32_t>(character_from_hex);
+        auto conversion_result = unicode::codepoint_to_character(character_from_hex);
+        if(!conversion_result){
+            return unexpected{create_parse_error(tokenizer, conversion_result.error())};
+        }
+        return *conversion_result;
     }
 
     [[nodiscard]] expected<std::optional<char32_t>> consume_character(unicode::tokenizer &tokenizer) {
@@ -514,24 +498,23 @@ private:
 
         if (*next_character == '\"') return {};
         if (*next_character == '\\') {
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void) tokenizer.consume_one();
+
             auto expected_consumed_character = consume_escaped(tokenizer);
             if(!expected_consumed_character){
                 return forward_error(std::move(expected_consumed_character));
             }
             auto& consumed_character = *expected_consumed_character;
 
-            if (!consumed_character)
+            if (!consumed_character){
+                (void) tokenizer.consume_one();
                 return unexpected{create_parse_error(tokenizer, parse_error_reason::escaped_character_invalid)};
+            }
 
             return *consumed_character;
         }
 
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
         return *next_character;
     }
 
@@ -570,9 +553,7 @@ private:
         std::optional<char32_t>& next_character = *expected_character;
         if (next_character != '\"') return {};
 
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
 
         auto expected_result = consume_characters(tokenizer);
         if(!expected_result){
@@ -587,12 +568,12 @@ private:
         }
 
         next_character = *expected_next_character;
-        if (next_character != '\"')
+        if (next_character != '\"'){
+            (void) tokenizer.consume_one();
             return unexpected{create_parse_error(tokenizer, parse_error_reason::string_missing_finishing_quote)};
-
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
         }
+
+        (void) tokenizer.consume_one();
 
         if (result.has_value()) return result;
         return string{get_allocator()};
@@ -605,11 +586,12 @@ private:
         }
 
         auto next_character = *expected_next_character;
-        if(next_character != character) return unexpected{create_parse_error(tokenizer, parse_error_reason::invalid_character_typo)};
-
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
+        if(next_character != character) {
+            (void) tokenizer.consume_one();
+            return unexpected{create_parse_error(tokenizer, parse_error_reason::invalid_character_typo)};
         }
+
+        (void) tokenizer.consume_one();
 
         return {};
     }
@@ -623,9 +605,7 @@ private:
         if(!next_character) return {};
 
         if(*next_character == 't'){
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void) tokenizer.consume_one();
             if(auto expected_no_error = consume_character(tokenizer, 'r'); !expected_no_error){
                 return forward_error(std::move(expected_no_error));
             }
@@ -637,9 +617,7 @@ private:
             }
             return true;
         } else if(*next_character == 'f'){
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void)tokenizer.consume_one();
             if(auto expected_no_error = consume_character(tokenizer, 'a'); !expected_no_error){
                 return forward_error(std::move(expected_no_error));
             }
@@ -665,9 +643,7 @@ private:
         }
         auto next_character = *expected_next_character;
         if(next_character != 'n') return {};
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
         if(auto expected_no_error = consume_character(tokenizer, 'u'); !expected_no_error){
             return forward_error(std::move(expected_no_error));
         }
@@ -694,7 +670,7 @@ private:
         auto next_character = *expected_next_character;
         if(!next_character) return unexpected{create_parse_error(tokenizer, parse_error_reason::could_not_match_any_value_type)};
 
-        if(auto expected_object = consume_object(tokenizer); expected_object && *expected_object){
+        if(auto expected_object = consume_object(tokenizer); expected_object && expected_object->has_value()){
             if(auto expected_no_error = consume_whitespace(tokenizer); !expected_no_error){
                 return forward_error(std::move(expected_no_error));
             }
@@ -702,7 +678,7 @@ private:
         } else if (!expected_object) {
             return forward_error(std::move(expected_object));
         }
-        if(auto expected_array = consume_array(tokenizer); expected_array && *expected_array){
+        if(auto expected_array = consume_array(tokenizer); expected_array && expected_array->has_value()){
             if(auto expected_no_error = consume_whitespace(tokenizer); !expected_no_error){
                 return forward_error(std::move(expected_no_error));
             }
@@ -769,15 +745,16 @@ private:
             return unexpected{create_parse_error(tokenizer, expected_colon.error())};
         }
 
-        if(*expected_colon!= ':')
+        if(*expected_colon!= ':'){
+            (void) tokenizer.consume_one();
             return unexpected{create_parse_error(tokenizer, parse_error_reason::missing_colon_after_key)};
-
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
         }
+
+        (void) tokenizer.consume_one();
 
         auto expected_element = consume_element(tokenizer);
         if(!expected_element && expected_element.error().reason == parse_error_reason::could_not_match_any_value_type){
+            (void) tokenizer.consume_one();
             return unexpected{create_parse_error(tokenizer, parse_error_reason::expected_element_after_key)};
         } else if (!expected_element){
             return forward_error(std::move(expected_element));
@@ -801,16 +778,17 @@ private:
                 return unexpected{create_parse_error(tokenizer, expected_next.error())};
             }
             if(*expected_next != ',') break;
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void) tokenizer.consume_one();
 
             auto expected_member = consume_member(tokenizer);
             if(!expected_member){
                 return forward_error(std::move(expected_member));
             }
             auto& member = *expected_member;
-            if(!member) return unexpected{create_parse_error(tokenizer, parse_error_reason::redundant_comma)};
+            if(!member) {
+                (void) tokenizer.consume_one();
+                return unexpected{create_parse_error(tokenizer, parse_error_reason::expected_brace)};
+            }
             (*ins).operator=(std::move(*member));
         }
 
@@ -825,9 +803,7 @@ private:
 
         if(*expected_open_bracket != '{') return std::nullopt;
 
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
 
         if(auto expected_no_error = consume_whitespace(tokenizer); !expected_no_error){
             return forward_error(std::move(expected_no_error));
@@ -839,9 +815,7 @@ private:
         }
 
         if(*expected_closed_bracket == '}'){
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void) tokenizer.consume_one();
             return object{get_allocator()};
         }
 
@@ -849,6 +823,17 @@ private:
         if(auto expected_no_error = consume_members(tokenizer, std::inserter(obj, obj.end())); !expected_no_error){
             return forward_error(std::move(expected_no_error));
         }
+
+        auto expected_again_close_bracket = tokenizer.peek_next();
+        if(!expected_again_close_bracket){
+            return unexpected{create_parse_error(tokenizer, expected_again_close_bracket.error())};
+        }
+
+        if(*expected_again_close_bracket != '}'){
+            (void) tokenizer.consume_one();
+            return unexpected{create_parse_error(tokenizer, parse_error_reason::expected_closing_brace)};
+        }
+        (void) tokenizer.consume_one();
         return {std::move(obj)};
     }
 
@@ -871,9 +856,8 @@ private:
 
             if(*expected_comma != ',') break;
 
-            if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-                return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-            }
+            (void) tokenizer.consume_one();
+
             auto expected_element = consume_element(tokenizer);
             if(!expected_element) {
                 return forward_error(std::move(expected_element));
@@ -893,9 +877,8 @@ private:
 
         if(*expected_open_bracket != '[') return std::nullopt;
 
-        if(auto expected_no_error = tokenizer.consume_one(); !expected_no_error){
-            return unexpected{create_parse_error(tokenizer, expected_no_error.error())};
-        }
+        (void) tokenizer.consume_one();
+
         if(auto expected_no_error = consume_whitespace(tokenizer); !expected_no_error){
             return forward_error(std::move(expected_no_error));
         }
@@ -904,7 +887,10 @@ private:
             return unexpected{create_parse_error(tokenizer, expected_close_bracket.error())};
         }
 
-        if(*expected_close_bracket == ']') return array{get_allocator()};
+        if(*expected_close_bracket == ']') {
+            (void) tokenizer.consume_one();
+            return array{get_allocator()};
+        }
 
         array arr{get_allocator()};
 
@@ -918,8 +904,10 @@ private:
         }
 
         if(*expected_again_close_bracket != ']'){
-            return unexpected{create_parse_error(tokenizer, parse_error_reason::missing_closing_square_bracket)};
+            (void) tokenizer.consume_one();
+            return unexpected{create_parse_error(tokenizer, parse_error_reason::expected_closing_bracket)};
         }
+        (void) tokenizer.consume_one();
         return {std::move(arr)};
     }
 };

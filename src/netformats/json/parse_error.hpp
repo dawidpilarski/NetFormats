@@ -20,16 +20,17 @@ namespace netformats::json{
         fraction_no_digits_after_dot,
         invalid_character_after_exponent,
         number_could_not_be_parsed,
-        hex_out_of_range,
+        hex_invalid,
         escaped_character_invalid,
         string_missing_finishing_quote,
         invalid_character_typo,
         could_not_match_any_value_type,
         missing_colon_after_key,
         expected_element_after_key,
-        redundant_comma,
-        missing_closing_square_bracket // inconsistent with object
-
+        expected_brace,
+        expected_closing_brace,
+        expected_closing_bracket,
+        remaining_data_after_json_parse
     };
 
     [[nodiscard]] constexpr parse_error_reason parse_error_from_unicode_error(unicode::unicode_error err){
@@ -63,7 +64,7 @@ namespace netformats::json{
                 return R"(Invalid exponent in number. 'e'/'E' characters must be followed bu optional sign, and mandatory digits.)";
             case parse_error_reason::number_could_not_be_parsed:
                 return "Could not create number out of the string. Check your conversion function.";
-            case parse_error_reason::hex_out_of_range:
+            case parse_error_reason::hex_invalid:
                 return "Invalid hex character. Hex character needs to be in range a-z, or A-Z, or 0-9.";
             case parse_error_reason::escaped_character_invalid:
                 return R"(Invalid escaped character. After '\' only limited characters are allowed [", \, /, b, f, n, r, t, u[hex,hex,hex,hex]].)";
@@ -77,10 +78,14 @@ namespace netformats::json{
                 return "Missing colon after key. Keys in object must be followed by \':\'.";
             case parse_error_reason::expected_element_after_key:
                 return "Missing value after key. Object's key does not have any associated value.";
-            case parse_error_reason::redundant_comma:
+            case parse_error_reason::expected_brace:
                 return "Redundant comma. Last element in object and array cannot be followed by comma.";
-            case parse_error_reason::missing_closing_square_bracket:
-                return "Invalid array. When parsing array, ending ']' character was not found";
+            case parse_error_reason::expected_closing_bracket:
+                return "Invalid array. When parsing an array, ending ']' character was not found";
+            case parse_error_reason::remaining_data_after_json_parse:
+                return "Remaining data after parse. Json parsing finished, but there is still some data left";
+            case parse_error_reason::expected_closing_brace:
+                return "Invalid object. When parsing an object, ending '}' character was not found";
         }
 
         assert(false);
@@ -92,7 +97,7 @@ namespace netformats::json{
         text_position position;
         parse_error_reason reason;
 
-        std::size_t buffer_offset;
+        const char* buffer_iterator;
         std::string_view buffer;
     };
 

@@ -103,3 +103,44 @@ TEST_CASE("Simple object with nested object with property"){
     CHECK((*result).index() == netformats::json::json_type::object);
     CHECK((*result).get<parser::object>().get_member("property").get<parser::object>().get_member("nestedProperty").get<parser::null>() == parser::null{});
 }
+
+TEST_CASE("Empty object with missing ending brace"){
+    parser parser_;
+    auto result = parser_.parse(R"({
+    "property": {
+       "nestedProperty": null
+    }
+)");
+    REQUIRE_FALSE(result);
+
+    CHECK(result.error().buffer_iterator == result.error().buffer.end());
+    CHECK(result.error().position == text_position{5, 0});
+    CHECK(result.error().reason == netformats::json::parse_error_reason::expected_closing_brace);
+}
+
+TEST_CASE("Empty object with missing ending brace. Last line starts with space"){
+    parser parser_;
+    auto result = parser_.parse(R"({
+    "property": {
+       "nestedProperty": null
+    }
+ )");
+    REQUIRE_FALSE(result);
+
+    CHECK(result.error().buffer_iterator == result.error().buffer.end());
+    CHECK(result.error().position == text_position{5, 1});
+    CHECK(result.error().reason == netformats::json::parse_error_reason::expected_closing_brace);
+}
+
+TEST_CASE("Nested object with missing ending brace. Last line starts with space"){
+    parser parser_;
+    auto result = parser_.parse(R"({
+    "property": {
+       "nestedProperty": null
+})");
+    REQUIRE_FALSE(result);
+
+    CHECK(result.error().buffer_iterator == result.error().buffer.end());
+    CHECK(result.error().position == text_position{4, 1});
+    CHECK(result.error().reason == netformats::json::parse_error_reason::expected_closing_brace);
+}
