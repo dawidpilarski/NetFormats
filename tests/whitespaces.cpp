@@ -136,7 +136,15 @@ TEST_CASE("Object with whitespaces after key"){
     CHECK(result->get<parser::object>().get_member("property").index() == netformats::json::json_type::null);
 }
 
-// Todo: test for whitespace before ',' after member
+TEST_CASE("Whitespaces different than standard 0020"){
+    parser parser_;
+    std::string element = "{" "\"property\"" + std::string{"\u00A0"} + ": null}";
+    auto result = parser_.parse(element);
 
-// Todo: add utf-8 unsupported whitespaces tests:
-// https://en.wikipedia.org/wiki/Whitespace_character
+    REQUIRE_FALSE(result.has_value());
+
+    REQUIRE(result.error().buffer_iterator != result.error().buffer.end());
+    REQUIRE(*result.error().buffer_iterator == *"\u00A0");
+    REQUIRE(result.error().position == text_position{1,12});
+    REQUIRE(result.error().reason == netformats::json::parse_error_reason::missing_colon_after_key);
+}
