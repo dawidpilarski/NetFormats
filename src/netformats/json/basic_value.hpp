@@ -38,8 +38,7 @@ enum class json_type : std::size_t {
     object
 };
 
-//todo allocator awareness
-constexpr std::string to_string(json_type type){
+constexpr std::string_view to_string_view(json_type type){
     switch (type) {
         case json_type::null:
             return "null";
@@ -59,6 +58,11 @@ constexpr std::string to_string(json_type type){
 
     throw std::invalid_argument("Unknown json type");
 }
+
+    template <typename Allocator = std::allocator<char>>
+    constexpr std::basic_string<char, std::char_traits<char>, Allocator> to_string(json_type type, Allocator allocator = Allocator{}){
+        return std::basic_string{to_string_view(type), std::move(allocator)};
+    }
 
 namespace details{
     template <typename basic_value, json_type>
@@ -160,19 +164,19 @@ public:
 
     template <typename T, typename... Args>
     requires(can_store_v<T> && std::constructible_from<T, Args...>)
-    constexpr explicit(sizeof...(Args) == 0) basic_value(in_place_type_t<T> in_place, Args&&... args) : value_(std::in_place_type<T>, std::forward<Args>(args)...){}
+    constexpr explicit(sizeof...(Args) == 1) basic_value([[maybe_unused]] in_place_type_t<T> in_place, Args&&... args) : value_(std::in_place_type<T>, std::forward<Args>(args)...){}
 
     template <typename T, typename U, typename... Args>
     requires(can_store_v<T> && std::constructible_from<T, std::initializer_list<U>, Args...>)
-    constexpr basic_value(in_place_type_t<T> in_place, std::initializer_list<U> il, Args&&... args) : value_(std::in_place_type<T>, il, std::forward<Args>(args)...){}
+    constexpr basic_value([[maybe_unused]] in_place_type_t<T> in_place, std::initializer_list<U> il, Args&&... args) : value_(std::in_place_type<T>, il, std::forward<Args>(args)...){}
 
     template <json_type idx, typename... Args>
     requires(std::constructible_from<typename idx_to_type<idx>::type, Args...>)
-    constexpr explicit(sizeof...(Args) == 0) basic_value(in_place_index_t<idx> in_place, Args&&... args) : value_(std::in_place_index<static_cast<std::size_t>(idx)>, std::forward<Args>(args)...){}
+    constexpr explicit(sizeof...(Args) == 1) basic_value([[maybe_unused]] in_place_index_t<idx> in_place, Args&&... args) : value_(std::in_place_index<static_cast<std::size_t>(idx)>, std::forward<Args>(args)...){}
 
     template <json_type idx, typename U, typename... Args>
     requires(std::constructible_from<typename idx_to_type<idx>::type, std::initializer_list<U>, Args...>)
-    constexpr basic_value(std::in_place_index_t<static_cast<std::size_t>(idx)> in_place, std::initializer_list<U> il, Args&&... args) : value_(std::in_place_index<static_cast<int>(idx)>, il, std::forward<Args>(args)...){}
+    constexpr basic_value([[maybe_unused]] std::in_place_index_t<static_cast<std::size_t>(idx)> in_place, std::initializer_list<U> il, Args&&... args) : value_(std::in_place_index<static_cast<int>(idx)>, il, std::forward<Args>(args)...){}
 
     // functions
 

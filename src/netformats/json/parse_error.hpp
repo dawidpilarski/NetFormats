@@ -81,18 +81,22 @@ namespace netformats::json{
             case parse_error_reason::expected_brace:
                 return "Redundant comma. Last element in object and array cannot be followed by comma.";
             case parse_error_reason::expected_closing_bracket:
-                return "Invalid array. When parsing an array, ending ']' character was not found";
+                return "Invalid array. After parsing arrays elements, ending ']' character was not found.";
             case parse_error_reason::remaining_data_after_json_parse:
-                return "Remaining data after parse. Json parsing finished, but there is still some data left";
+                return "Remaining data after parse. Json parsing finished, but there is still some data left.";
             case parse_error_reason::expected_closing_brace:
-                return "Invalid object. When parsing an object, ending '}' character was not found";
+                return "Invalid object. After parsing objects members, ending '}' character was not found.";
         }
 
         assert(false);
         return "unknown";
     }
 
-    template <typename string>
+    template <typename Allocator = std::allocator<char>>
+    [[nodiscard]] std::basic_string<char, std::char_traits<char>, Allocator> to_string(parse_error_reason error_reason, Allocator alloc = Allocator{}){
+        return std::basic_string<char, std::char_traits<char>, Allocator> {to_string_view(error_reason), std::move(alloc)};
+    }
+
     struct parse_error{
         text_position position;
         parse_error_reason reason;
@@ -107,11 +111,11 @@ namespace netformats::json{
         struct forward_codepoints_result{
             const char* destination;
             const char* closest_newline;
-            unsigned codepoints_to_newline;
+            std::size_t codepoints_to_newline;
         };
 
         inline forward_codepoints_result find_buffer_start(std::string_view buffer, std::size_t buffer_offset, unsigned codepoints_back){
-            forward_codepoints_result result;
+            forward_codepoints_result result{};
             result.closest_newline = nullptr;
             result.codepoints_to_newline = 0;
 
@@ -119,31 +123,34 @@ namespace netformats::json{
                 constexpr unsigned max_10_bytes_in_codepoint = 3;
                 unsigned current_codepoint_byte = max_10_bytes_in_codepoint;
                 while (current_codepoint_byte --> 0){ // codepoints before failure point are assumed to be correct unicode
-                    auto current_byte = static_cast<std::byte>(buffer[buffer_offset]);
+                    std::byte current_byte = (buffer_offset == buffer.size()) ? std::byte{'\0'} : static_cast<std::byte>(buffer[buffer_offset]);
                     if(!unicode::starts_with_10(current_byte) || buffer_offset == 0){
                         break;
                     }
-                    buffer_offset--;
+                    --buffer_offset;
                 }
-                if(result.closest_newline == nullptr){
-                    result.codepoints_to_newline++;
-                }
-                auto current_byte = static_cast<std::byte>(buffer[buffer_offset]);
+
+
+                //todo refactor
+                auto current_byte = (buffer_offset == buffer.size()) ? std::byte{'\0'} : static_cast<std::byte>(buffer[buffer_offset]);
                 if(static_cast<char>(current_byte) == '\n' && result.closest_newline == nullptr){
                     result.closest_newline = buffer.data() + buffer_offset;
                 }
+
+                if(result.closest_newline == nullptr){
+                    ++result.codepoints_to_newline;
+                }
+
+                --buffer_offset;
                 assert(!unicode::starts_with_10(current_byte));
             }
 
             result.destination = buffer.data() + buffer_offset;
-            if(result.closest_newline == nullptr){
-                result.closest_newline = result.destination;
-            }
             return result;
         }
 
         inline forward_codepoints_result find_buffer_end(std::string_view buffer, std::size_t buffer_offset, unsigned codepoints_forward) {
-            forward_codepoints_result result;
+            forward_codepoints_result result{};
             result.closest_newline = nullptr;
             auto new_buffer = std::string_view{buffer.data()+buffer_offset, buffer.data() + buffer.size()};
 
@@ -159,42 +166,90 @@ namespace netformats::json{
             }
 
             result.destination = tok.current_iterator();
-            if(result.closest_newline == nullptr){
-                result.closest_newline = result.destination;
-            }
             return result;
         }
     }
 
 
-    template <typename string = std::string>
-    string to_string(const parse_error<string>& err){
-        string str;
-        //todo handle allocator correctly
-        str.append("Parsing failed at position [line:column] " + to_string(err.position));
-        str +='\n';
-        str.append("Reason: " + err.reason);
+    namespace details{
+        template <typename string>
+        std::size_t escape_whitespaces(string& characters){
+            std::remove_reference_t<string> result{characters.get_allocator()};
+            result.reserve(characters.capacity());
+
+            std::size_t number_of_whitespaces = 0;
+            for(auto character : characters){
+                switch (character) {
+                    case '\n':
+                        result.append("\\n");
+                        number_of_whitespaces++;
+                        break;
+                    case '\t':
+                        result.append("\\t");
+                        number_of_whitespaces++;
+                        break;
+                    case '\r':
+                        result.append("\\r");
+                        number_of_whitespaces++;
+                        break;
+                    case '\f':
+                        result.append("\\r");
+                        number_of_whitespaces++;
+                        break;
+                    case '\v':
+                        result.append("\\v");
+                        number_of_whitespaces++;
+                        break;
+                    default:
+                        result.push_back(character);
+                }
+            }
+
+            characters = std::move(result);
+
+            return number_of_whitespaces;
+        }
+    }
+
+    template <typename Allocator = std::allocator<char>>
+    std::basic_string<char, std::char_traits<char>, Allocator> to_string(const parse_error& err, Allocator alloc = Allocator{}){
+        using string = std::basic_string<char, std::char_traits<char>, Allocator>;
+
+        string str{alloc};
+
+        str.append("Parsing failed at position [line:column] " + to_string(err.position, alloc));
+        str.append("\nReason: " + to_string(err.reason, alloc));
         str.append("\n\n");
 
-        if(err.encoding_error){
+        if(err.reason <= parse_error_reason::utf_8_codepoint_out_of_range){
             return str;
         }
 
-        constexpr unsigned max_codepoints_context = 10;
+        constexpr unsigned max_codepoints_context = 20;
         constexpr char underscore_character = '~';
         constexpr char point_character = '^';
 
-        details::forward_codepoints_result before_codepoints = details::find_buffer_start(err.buffer, err.buffer_offset, max_codepoints_context);
-        details::forward_codepoints_result after_codepoints = details::find_buffer_start(err.buffer, err.buffer_offset, max_codepoints_context);
+        auto buffer_offset = std::distance(err.buffer.begin(), err.buffer_iterator);
 
-        string before {before_codepoints.destination, before_codepoints.closest_newline};
-        string error {before_codepoints.closest_newline, after_codepoints.closest_newline};
-        string error_marker;
-        string after {after_codepoints.closest_newline, after_codepoints.destination};
-        str.append(before);
+        details::forward_codepoints_result before_codepoints = details::find_buffer_start(err.buffer, buffer_offset, max_codepoints_context);
+        details::forward_codepoints_result after_codepoints = details::find_buffer_end(err.buffer, buffer_offset, max_codepoints_context);
+
+        const char* const error_start = (before_codepoints.closest_newline == nullptr) ? before_codepoints.destination : before_codepoints.closest_newline+1;
+        if(before_codepoints.closest_newline != nullptr) before_codepoints.codepoints_to_newline--;
+
+        const char* const error_end = (after_codepoints.closest_newline == nullptr) ? after_codepoints.destination : after_codepoints.closest_newline;
+
+        string error {error_start, error_end, alloc};
+        std::size_t number_of_whitespaces_without_space = details::escape_whitespaces(error);
+        string error_marker {alloc};
+
         str.append(error);
+        str.push_back('\n');
 
         auto before_error_codepoints = before_codepoints.codepoints_to_newline;
+
+        //each whitespace except space is substituted with \\ + character
+        before_error_codepoints += number_of_whitespaces_without_space;
 
         while(before_error_codepoints -- > 0){
             if(before_error_codepoints < 3){
@@ -205,12 +260,9 @@ namespace netformats::json{
         }
 
         error_marker += point_character;
-        error_marker += string{3, underscore_character};
+        error_marker += string(3, underscore_character, alloc);
 
-        str.append(before);
-        str.append(error);
         str.append(error_marker);
-        str.append(after);
 
         return str;
     }

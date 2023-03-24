@@ -23,6 +23,7 @@ add_executable(${PROJECT_NAME}
         strings.cpp
         custom_allocator.cpp
         test_defs.hpp
+        parse_error.cpp
         )
 target_compile_options(${PROJECT_NAME} PUBLIC "-ftemplate-backtrace-limit=0")
 target_link_libraries(${PROJECT_NAME} PUBLIC NFlib Catch2::Catch2WithMain)
