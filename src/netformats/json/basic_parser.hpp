@@ -58,15 +58,13 @@ public:
     using value = basic_value<config>;
     using object = typename value::object;
     using array = typename value::array;
-    using error = parse_error<string>;
+    using error = parse_error;
 private:
     template <typename T>
     using expected = expected<T, error>;
     using expected_no_value = expected<null>;
 public:
 
-
-    //todo handle allocators correctly
     explicit basic_parser(allocator<null> alloc) : root_allocator(std::move(alloc)){}
     basic_parser() : basic_parser(allocator<null>{}){}
 
@@ -143,7 +141,7 @@ private:
             assert(expected_no_error);
         }
 
-        return {};
+        assert(false);
     }
 
     enum class sign {

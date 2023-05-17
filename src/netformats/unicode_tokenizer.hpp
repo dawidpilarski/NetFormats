@@ -21,7 +21,6 @@ namespace netformats::unicode {
     enum class unicode_error{
         invalid_utf_encoding,
         codepoint_out_of_range,
-        end_of_input
     };
 
     constexpr expected<unsigned, unicode_error> to_character_size(char firstByte) {
@@ -37,7 +36,7 @@ namespace netformats::unicode {
     constexpr bool starts_with_10(std::byte byte) {
         byte &= std::byte{0b11000000};
         return byte == std::byte{0b10000000};
-    };
+    }
 
     constexpr expected<unsigned, unicode_error> to_character_size(char32_t unicodeChar) {
 
@@ -121,10 +120,6 @@ namespace netformats::unicode {
 
         [[nodiscard]] text_position source_position() const {
             return {.line = current.line_number, .column = current.col_number};
-        }
-
-        [[nodiscard]] std::string next_source_position() const {
-            return std::to_string(next->line_number) + ":" + std::to_string(next->col_number);
         }
 
         [[nodiscard]] constexpr expected<std::optional<char32_t>, unicode_error> peek_next() {
