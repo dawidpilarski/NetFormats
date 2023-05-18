@@ -22,3 +22,16 @@ and different for very specific ones).
 
 Updates will be reflected in readme on the regular basis
 
+## Preparing for development
+
+```bash 
+conan install . --output-folder=build --build=missing
+conan install . --output-folder=build_debug -s build_type=Debug --build=missing
+
+cmake --preset conan-debug
+cmake --build --preset conan-debug
+```
+
+Clion will automatically understand presets
+
+
