@@ -7,7 +7,7 @@
 #pragma once
 
 #include <netformats/json/basic_parser.hpp>
-#include <netformats/json/json_config.hpp>
+#include <netformats/json/config.hpp>
 #include <netformats/null.hpp>
 
 #include <catch2/catch_test_macros.hpp>

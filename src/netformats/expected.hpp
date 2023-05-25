@@ -12,6 +12,7 @@
 #include <initializer_list>
 #include <concepts>
 #include <optional>
+#include <cassert>
 
 #if __cpp_lib_expected >= 202202L
 #include <exception>

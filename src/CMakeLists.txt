@@ -5,7 +5,7 @@
 
 project(NFlib LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
@@ -22,5 +22,8 @@ target_sources(${PROJECT_NAME} INTERFACE
         netformats/json/basic_object.hpp
         netformats/json/basic_array.hpp
         netformats/json/basic_value.hpp
-        netformats/json/basic_parser.hpp)
+        netformats/json/basic_parser.hpp
+        netformats/json/stringify.hpp
+        netformats/json/constants.hpp
+        netformats/json/tokenizer.hpp)
 target_include_directories(${PROJECT_NAME} INTERFACE .)

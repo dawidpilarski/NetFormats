@@ -160,12 +160,12 @@ namespace netformats::json{
                 if(!tok.consume_one()){
                     break;
                 }
-                if(result.closest_newline == nullptr && *tok.current_iterator() == '\n'){
-                   result.closest_newline = tok.current_iterator();
+                if(result.closest_newline == nullptr && *tok.current_buffer_iterator() == '\n'){
+                   result.closest_newline = tok.current_buffer_iterator();
                 }
             }
 
-            result.destination = tok.current_iterator();
+            result.destination = tok.current_buffer_iterator();
             return result;
         }
     }

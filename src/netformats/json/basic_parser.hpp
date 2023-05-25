@@ -8,9 +8,10 @@
 #include <netformats/json/basic_object.hpp>
 #include <netformats/json/basic_array.hpp>
 #include <netformats/json/parse_error.hpp>
-#include <netformats/json/json_config.hpp>
+#include <netformats/json/config.hpp>
 #include <netformats/unicode_tokenizer.hpp>
 #include <netformats/expected.hpp>
+#include <netformats/json/tokenizer.hpp>
 #include <charconv>
 
 #include <array>
@@ -96,7 +97,7 @@ private:
         error.position = tokenizer.source_position();
         error.reason = reason;
         error.buffer = tokenizer.source_buffer();
-        error.buffer_iterator = tokenizer.current_iterator();
+        error.buffer_iterator = tokenizer.current_buffer_iterator();
 
 
         return error;
@@ -108,7 +109,7 @@ private:
         error.position = tokenizer.source_position();
         error.reason = parse_error_from_unicode_error(reason);
         error.buffer = tokenizer.source_buffer();
-        error.buffer_iterator = tokenizer.current_iterator() + 1;
+        error.buffer_iterator = tokenizer.current_buffer_iterator() + 1;
 
         return error;
     }
@@ -218,13 +219,13 @@ private:
         auto& result = *expected_result;
 
         if (result) {
-            begin = tokenizer.current_iterator();
+            begin = tokenizer.current_buffer_iterator();
             while (true){
                 auto expected_digit = consume_digit(tokenizer);
                 if(!expected_digit) return forward_error(std::move(expected_digit));
                 if(!*expected_digit) break;
             }
-            end = tokenizer.current_iterator() + 1;
+            end = tokenizer.current_buffer_iterator() + 1;
 
             return std::string_view{begin, end};
         }
@@ -245,7 +246,7 @@ private:
         if (!next_character) return {};
         if (*next_character == '-') {
             multiplier = -1;
-            begin = tokenizer.current_iterator();
+            begin = tokenizer.current_buffer_iterator();
             (void)tokenizer.consume_one();
         }
 
@@ -256,7 +257,7 @@ private:
         if (*expected_zero == '0') {
             (void) tokenizer.consume_one();
 
-            if (!begin) begin = tokenizer.current_iterator();
+            if (!begin) begin = tokenizer.current_buffer_iterator();
             if (auto expected_digit = consume_digit(tokenizer); *expected_digit && expected_digit->has_value()) {
                 return unexpected{create_parse_error(tokenizer, parse_error_reason::integer_0_with_multiple_digits)};
             }
@@ -278,7 +279,7 @@ private:
             return {};
         }
 
-        if (!begin) begin = tokenizer.current_iterator();
+        if (!begin) begin = tokenizer.current_buffer_iterator();
 
         auto expected_digits = consume_digits(tokenizer);
         if(!expected_digits)
@@ -297,7 +298,7 @@ private:
 
         (void) tokenizer.consume_one();
 
-        const char *begin = tokenizer.current_iterator();
+        const char *begin = tokenizer.current_buffer_iterator();
 
         auto expected_digits = consume_digits(tokenizer);
         if(!expected_digits){
@@ -326,7 +327,7 @@ private:
         if (*next != 'e' && *next != 'E') return {};
 
         (void) tokenizer.consume_one();
-        const char *begin = tokenizer.current_iterator();
+        const char *begin = tokenizer.current_buffer_iterator();
 
         if(auto expected_sign = consume_sign(tokenizer); !expected_sign){
             return forward_error(std::move(expected_sign));
@@ -366,12 +367,12 @@ private:
         const auto& consumed_exponent = *expected_exponent;
 
         if (!consumed_fraction && !consumed_exponent) {
-            return create_integer<integer>(*consumed_integer, tokenizer.current_iterator() + 1, get_allocator());
+            return create_integer<integer>(*consumed_integer, tokenizer.current_buffer_iterator() + 1, get_allocator());
         }
 
         long double number;
         const char *begin = *consumed_integer;
-        auto result = std::from_chars(begin, tokenizer.current_iterator()+1, number);
+        auto result = std::from_chars(begin, tokenizer.current_buffer_iterator() + 1, number);
 
         if (result.ec != std::errc{}) {
             return unexpected{create_parse_error(tokenizer, parse_error_reason::number_could_not_be_parsed)};
@@ -443,7 +444,7 @@ private:
 
         (void) tokenizer.consume_one();
 
-        auto first_hex_iter = tokenizer.current_iterator();
+        auto first_hex_iter = tokenizer.current_buffer_iterator();
         std::array<std::optional<char>, 4> four_hexes = {0};
 
         if(auto expected_hex = consume_hex(tokenizer); !expected_hex ){
@@ -477,7 +478,7 @@ private:
         ++first_hex_iter;
 
         uint32_t character_from_hex;
-        std::from_chars(first_hex_iter, tokenizer.current_iterator() + 1, character_from_hex, 16);
+        std::from_chars(first_hex_iter, tokenizer.current_buffer_iterator() + 1, character_from_hex, 16);
         auto conversion_result = unicode::codepoint_to_character(character_from_hex);
         if(!conversion_result){
             return unexpected{create_parse_error(tokenizer, conversion_result.error())};

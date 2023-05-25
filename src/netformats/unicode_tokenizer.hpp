@@ -153,7 +153,7 @@ namespace netformats::unicode {
             return next->parsed_character;
         }
 
-        [[nodiscard]] char const *current_iterator() const {
+        [[nodiscard]] char const *current_buffer_iterator() const {
             return buffer.data() + current.idx;
         }
 
@@ -231,18 +231,6 @@ namespace netformats::unicode {
             static_assert(max_character == 0xf48fbfbf);
 
             result.second = unicode::as_character(buffer.data() + idx, *expectedSize);
-
-            if (result.second < 0x0020 || result.second > max_character) {
-                switch (result.second) {
-                    case ' ':
-                    case '\r':
-                    case '\n':
-                    case '\t':
-                    return result;
-                }
-                return unexpected{unicode_error::codepoint_out_of_range};
-            }
-
             return result;
         }
 

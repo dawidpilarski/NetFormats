@@ -12,7 +12,7 @@ find_package(Catch2 REQUIRED)
 
 include(Catch)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 add_executable(${PROJECT_NAME}
         simple_array.cpp

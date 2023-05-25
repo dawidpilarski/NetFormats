@@ -24,6 +24,7 @@ namespace netformats::json{
         using allocator = std::allocator<T>;
 
         using string = std::basic_string<char, std::char_traits<char>, allocator<char>>;
+
         template <typename value>
         using storage = storages::random_order_no_duplicates<string, value, allocator<std::pair<const string, value>>>;
     };
