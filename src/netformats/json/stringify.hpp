@@ -21,16 +21,16 @@ namespace netformats::json{
         string_not_utf8
     };
 
-    template <typename T>
+    template <typename T, typename Allocator>
     struct stringifier;
 
     template <typename Allocator>
-    struct stringifier<std::basic_string<char, std::char_traits<char>, Allocator>>{
-
+    struct stringifier<std::basic_string<char, std::char_traits<char>, Allocator>, Allocator>{
+        Allocator allocator;
         using string_type = std::basic_string<char, std::char_traits<char>, Allocator>;
 
-        static inline expected<string_type, stringify_error> to_string(const string_type& input){
-            string_type result{input.get_allocator()};
+        inline expected<string_type, stringify_error> to_string(std::string_view input){
+            string_type result{allocator};
             result.reserve(input.size() + 2);
 
             unicode::tokenizer tok{input};
@@ -69,6 +69,35 @@ namespace netformats::json{
             }
 
             result.push_back('\"');
+        }
+    };
+
+    template <typename Allocator>
+    struct stringifier<bool, Allocator>{
+        Allocator allocator;
+        using string_type = std::basic_string<char, std::char_traits<char>, Allocator>;
+
+        inline expected<string_type, stringify_error> to_string(bool input){
+            string_type result{allocator};
+
+            if(input) {
+                result.append("true");
+            } else{
+                result.append("false");
+            }
+
+            return result;
+        }
+    };
+
+    template <typename Allocator>
+    struct stringifier<null_t, Allocator>{
+        Allocator allocator;
+        using string_type = std::basic_string<char, std::char_traits<char>, Allocator>;
+
+        inline expected<string_type, stringify_error> to_string(bool input){
+            string_type result{"null", allocator};
+            return result;
         }
     };
 
