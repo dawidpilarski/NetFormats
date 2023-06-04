@@ -48,6 +48,34 @@ namespace netformats::unicode {
         return 1;
     }
 
+    template <typename inserter>
+    expected_no_value<unicode_error> copy(char32_t unicode_character, inserter ins){
+        auto expected_size = to_character_size(unicode_character);
+
+        if(!expected_size.has_value()){
+            return unexpected{expected_size.error()};
+        }
+
+        auto size = *expected_size;
+
+        assert(size <= 4 && size > 0);
+
+        switch (size) {
+            case 4:
+                *ins = unicode_character >>24;
+            case 3:
+                *ins = unicode_character>>16;
+            case 2:
+                *ins = unicode_character>>8;
+            case 1:
+                *ins = unicode_character;
+            default:
+                assert(false);
+        }
+
+        return {};
+    }
+
     constexpr char32_t as_character(char const *begin, unsigned size) {
         char32_t new_character = 0;
         while (size-- > 0) {
